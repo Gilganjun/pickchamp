@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "PickChamp — Prove Your Fight Knowledge",
   description:
-    "You Don't Know S*** About Fighting. Prove It. Global combat-sports prediction competition.",
+    "You Don't Know S*** About Fighting. Global combat-sports prediction competition.",
 };
 
 export default function RootLayout({

@@ -32,24 +32,17 @@ export function PicksClient() {
   }, [load]);
 
   return (
-    <AppShell>
+    <AppShell prominentBrand showTagline>
       <TabBar tabs={tabs} value={tab} onChange={setTab} />
       <div className="mt-4">
         <SportFilter value={sport} onChange={setSport} />
       </div>
 
-      <div className="mt-4 flex items-center justify-between">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-          {tab === "upcoming"
-            ? "Upcoming Fights"
-            : tab === "live"
-              ? "Live Fights"
-              : "Settled Fights"}
-        </h2>
+      <div className="mt-3 flex justify-end">
         <span className="text-[10px] text-zinc-600">Sort: Earliest</span>
       </div>
 
-      <div className="mt-4 space-y-4">
+      <div className="mt-3 space-y-4">
         {loading ? (
           <p className="py-12 text-center text-sm text-zinc-500">Loading fights…</p>
         ) : fights.length === 0 ? (

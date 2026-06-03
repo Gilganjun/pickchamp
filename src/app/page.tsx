@@ -10,8 +10,6 @@ export default function LandingPage() {
         </h1>
         <p className="mt-4 text-lg text-zinc-400 leading-relaxed">
           You Don&apos;t Know S*** About Fighting.
-          <br />
-          Prove It.
         </p>
 
         <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:justify-center">

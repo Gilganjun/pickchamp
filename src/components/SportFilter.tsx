@@ -16,7 +16,8 @@ interface SportFilterProps {
 
 export function SportFilter({ value, onChange }: SportFilterProps) {
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+    <div className="flex w-full justify-center pb-1">
+      <div className="inline-flex flex-wrap justify-center gap-2">
       {filters.map((f) => (
         <button
           key={f.id}
@@ -33,6 +34,7 @@ export function SportFilter({ value, onChange }: SportFilterProps) {
           {f.label}
         </button>
       ))}
+      </div>
     </div>
   );
 }

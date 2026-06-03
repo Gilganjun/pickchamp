@@ -11,6 +11,9 @@
 /.next/
 /out/
 
+# OneDrive — do not sync build cache (causes EINVAL / broken CSS in dev)
+.next/
+
 # production
 /build
 

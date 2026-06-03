@@ -1,6 +1,6 @@
 # PickChamp
 
-**You Don't Know S\*\*\* About Fighting. Prove It.**
+**You Don't Know S\*\*\* About Fighting.**
 
 Combat-sports prediction competition for boxing and MMA. Not a betting or gambling app — skill-based ratings and rankings only.
 
@@ -19,7 +19,27 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open the URL printed in the terminal (usually [http://localhost:3000](http://localhost:3000)).
+
+`npm run dev` clears the `.next` cache first (helps on OneDrive / Windows). Use `npm run dev:fast` to skip that step.
+
+### UI looks unstyled (white page, default fonts)?
+
+That means **CSS did not load**, usually because:
+
+1. A **stale** `next dev` process is still running on port 3000 (broken cache).
+2. The **`.next` folder is corrupted** — common when the project lives in **OneDrive** (`EINVAL: invalid argument, readlink`).
+
+**Fix:**
+
+```powershell
+# Stop all Node dev servers, then:
+cd path\to\PickChamp_Cursor
+Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue
+npm run dev
+```
+
+Use the **exact port** shown in the terminal (e.g. 3002 if 3000 is busy). Hard-refresh the browser (Ctrl+Shift+R).
 
 Without Supabase credentials, the app uses in-memory mock data so you can review the UI immediately.
 
