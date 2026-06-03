@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+:root {
+  --background: #070707;
+  --foreground: #ffffff;
+  --card: #111111;
+  --card-elevated: #181818;
+  --border: #2a2a2a;
+  --muted: #a1a1aa;
+  --accent: #dc2626;
+  --accent-hover: #ef4444;
+  --gold: #d4a853;
+  --boxing: #dc2626;
+  --mma: #7c3aed;
+  --fighter-b: #2563eb;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-elevated: var(--card-elevated);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-gold: var(--gold);
+  --font-sans: var(--font-geist-sans);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  min-height: 100dvh;
+}
+
+* {
+  box-sizing: border-box;
+}
