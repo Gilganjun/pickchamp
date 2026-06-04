@@ -2,11 +2,19 @@
 
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
   useTransition,
   type ReactNode,
 } from "react";
+import {
+  AdvancedRatingNote,
+  PickFistLine,
+  RatingSwingButtonFooter,
+  RatingSwingPanel,
+} from "@/components/picks/PickRatingSwing";
+import { getPickFistLine, getPickPotential } from "@/lib/rating/getPickPotential";
 import { PickImpactOverlay } from "@/components/picks/PickImpactOverlay";
 import {
   createPickImpactConfig,
@@ -56,9 +64,93 @@ function pickIsDirty(
   );
 }
 
+type FighterSide = "fighterA" | "fighterB";
+
+function getFighterPickColumnState(
+  side: FighterSide,
+  savedOutcome: PredictedOutcome | null | undefined,
+  draftOutcome: PredictedOutcome | null
+) {
+  const isSavedPick = savedOutcome === side;
+  const isDraftPick =
+    draftOutcome === side && draftOutcome !== savedOutcome;
+  const activeFighterPick =
+    draftOutcome === "fighterA" ||
+    draftOutcome === "fighterB" ||
+    savedOutcome === "fighterA" ||
+    savedOutcome === "fighterB";
+  const isDimmed =
+    activeFighterPick &&
+    !isSavedPick &&
+    !isDraftPick &&
+    savedOutcome !== "draw" &&
+    draftOutcome !== "draw";
+
+  return { isSavedPick, isDraftPick, isDimmed };
+}
+
+function getPickButtonLabel(
+  side: FighterSide,
+  surname: string,
+  savedOutcome: PredictedOutcome | null | undefined,
+  draftOutcome: PredictedOutcome | null
+): string {
+  if (draftOutcome !== side) {
+    return `Pick ${surname}`;
+  }
+  if (savedOutcome === side) {
+    return "✓ Selected";
+  }
+  return "Selected";
+}
+
+function FighterPickColumn({
+  side,
+  name,
+  accent,
+  savedOutcome,
+  draftOutcome,
+  subtitle,
+}: {
+  side: FighterSide;
+  name: string;
+  accent: "red" | "blue";
+  savedOutcome: PredictedOutcome | null | undefined;
+  draftOutcome: PredictedOutcome | null;
+  subtitle?: ReactNode;
+}) {
+  const { isSavedPick, isDraftPick, isDimmed } = getFighterPickColumnState(
+    side,
+    savedOutcome,
+    draftOutcome
+  );
+
+  return (
+    <div
+      className={cn(
+        "relative text-center transition-opacity",
+        isSavedPick && `fighter-column-selected-saved fighter-column-selected-saved--${accent}`,
+        isDraftPick && "fighter-column-selected-draft",
+        isDimmed && "fighter-column-dimmed"
+      )}
+    >
+      {isSavedPick ? (
+        <span className="selected-pick-badge">✓ Your pick</span>
+      ) : isDraftPick ? (
+        <span className="selected-pick-badge">Unsaved</span>
+      ) : null}
+      <p className="fighter-pick-name text-sm font-black uppercase leading-tight tracking-tight text-white">
+        {name}
+      </p>
+      {subtitle}
+    </div>
+  );
+}
+
 function PickChoiceButton({
   selected,
   variant,
+  savedMatch,
   className,
   impactClass,
   children,
@@ -66,6 +158,7 @@ function PickChoiceButton({
 }: {
   selected: boolean;
   variant: "red" | "blue" | "neutral";
+  savedMatch?: boolean;
   className: string;
   impactClass?: string;
   children: ReactNode;
@@ -78,7 +171,11 @@ function PickChoiceButton({
       aria-pressed={selected}
       className={cn(
         className,
-        selected && `pick-choice-selected pick-choice-selected--${variant}`,
+        selected &&
+          cn(
+            `pick-choice-selected pick-choice-selected--${variant}`,
+            savedMatch && "pick-choice-selected--saved-static"
+          ),
         impactClass
       )}
     >
@@ -94,6 +191,7 @@ function PickSubmitPanel({
   method,
   round,
   pending,
+  activePotential,
   onSubmit,
 }: {
   fight: FightWithRelations;
@@ -102,6 +200,7 @@ function PickSubmitPanel({
   method: PredictedMethod | null;
   round: number | null;
   pending: boolean;
+  activePotential: ReturnType<typeof getPickPotential> | null;
   onSubmit: () => void;
 }) {
   const savedLine = existing
@@ -158,6 +257,7 @@ function PickSubmitPanel({
             </p>
           </>
         )}
+        <RatingSwingPanel potential={activePotential} />
       </div>
 
       <button
@@ -258,6 +358,56 @@ export function FightCard({
   const sportBorder =
     fight.sport === "boxing" ? "border-red-600/40" : "border-purple-600/40";
 
+  const savedOutcome = existing?.predicted_outcome;
+  const draftOutcome = locked || settled ? null : outcome;
+
+  const favouriteContext = useMemo(
+    () => ({
+      favouriteSide: fight.favourite_side,
+      favouriteLevel: fight.favourite_level,
+    }),
+    [fight.favourite_side, fight.favourite_level]
+  );
+
+  const potentialFighterA = useMemo(
+    () =>
+      getPickPotential({
+        predictedOutcome: "fighterA",
+        ...favouriteContext,
+      }),
+    [favouriteContext]
+  );
+
+  const potentialFighterB = useMemo(
+    () =>
+      getPickPotential({
+        predictedOutcome: "fighterB",
+        ...favouriteContext,
+      }),
+    [favouriteContext]
+  );
+
+  const potentialDraw = useMemo(
+    () =>
+      getPickPotential({
+        predictedOutcome: "draw",
+        ...favouriteContext,
+      }),
+    [favouriteContext]
+  );
+
+  const pickFistLine = useMemo(() => getPickFistLine(fight), [fight]);
+
+  const activePotential = useMemo(() => {
+    if (!outcome || locked || settled) return null;
+    return getPickPotential({
+      predictedOutcome: outcome,
+      ...favouriteContext,
+      predictedMethod: method,
+      predictedRound: round,
+    });
+  }, [outcome, method, round, favouriteContext, locked, settled]);
+
   const handleSubmit = () => {
     if (!outcome) {
       setError("Select a fighter (or draw) first.");
@@ -310,23 +460,29 @@ export function FightCard({
       </div>
 
       <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-        <div className="text-center">
-          <p className="text-sm font-black uppercase leading-tight tracking-tight">
-            {fight.fighter_a_name}
-          </p>
-          <p className="mt-0.5 text-[10px] text-zinc-500">
-            {fight.scheduled_rounds} rds
-            {fight.weight_class ? ` · ${fight.weight_class}` : ""}
-          </p>
-        </div>
+        <FighterPickColumn
+          side="fighterA"
+          name={fight.fighter_a_name}
+          accent="red"
+          savedOutcome={savedOutcome}
+          draftOutcome={draftOutcome}
+          subtitle={
+            <p className="mt-0.5 text-[10px] text-zinc-500">
+              {fight.scheduled_rounds} rds
+              {fight.weight_class ? ` · ${fight.weight_class}` : ""}
+            </p>
+          }
+        />
         <span className="rounded-full border border-[#2a2a2a] bg-[#181818] px-2 py-1 text-[10px] font-bold text-zinc-400">
           VS
         </span>
-        <div className="text-center">
-          <p className="text-sm font-black uppercase leading-tight tracking-tight">
-            {fight.fighter_b_name}
-          </p>
-        </div>
+        <FighterPickColumn
+          side="fighterB"
+          name={fight.fighter_b_name}
+          accent="blue"
+          savedOutcome={savedOutcome}
+          draftOutcome={draftOutcome}
+        />
       </div>
 
       <p className="mt-3 text-center text-xs text-zinc-400">
@@ -379,28 +535,38 @@ export function FightCard({
         </div>
       ) : (
         <>
+          <PickFistLine label={pickFistLine} />
           <div
             className={cn(
-              "mt-4 grid gap-2 overflow-visible",
+              "mt-3 grid gap-2 overflow-visible",
               fight.sport === "boxing" ? "grid-cols-3" : "grid-cols-2"
             )}
           >
             <div className="relative overflow-visible">
               <PickChoiceButton
                 selected={outcome === "fighterA"}
+                savedMatch={savedOutcome === "fighterA" && outcome === "fighterA"}
                 variant="red"
                 onClick={() => selectOutcome("fighterA", "left")}
                 impactClass={
                   impact?.side === "left" ? "pick-button-compress" : undefined
                 }
                 className={cn(
-                  "relative z-10 w-full rounded-xl py-3 text-xs font-bold uppercase tracking-wide transition-colors",
+                  "relative z-10 flex w-full flex-col items-center gap-0.5 rounded-xl px-1 py-2.5 text-xs font-bold uppercase tracking-wide transition-colors",
                   outcome === "fighterA"
                     ? "bg-red-600 text-white"
                     : "bg-red-600/90 text-white hover:bg-red-500"
                 )}
               >
-                Pick {getFighterSurname(fight.fighter_a_name)}
+                <span>
+                  {getPickButtonLabel(
+                    "fighterA",
+                    getFighterSurname(fight.fighter_a_name),
+                    savedOutcome,
+                    outcome
+                  )}
+                </span>
+                <RatingSwingButtonFooter potential={potentialFighterA} />
               </PickChoiceButton>
               {impact?.side === "left" && (
                 <PickImpactOverlay config={impact} />
@@ -412,31 +578,41 @@ export function FightCard({
                 variant="neutral"
                 onClick={() => setOutcome("draw")}
                 className={cn(
-                  "w-full rounded-xl border-2 py-3 text-xs font-bold uppercase tracking-wide transition-colors",
+                  "flex w-full flex-col items-center gap-0.5 rounded-xl border-2 px-1 py-2.5 text-xs font-bold uppercase tracking-wide transition-colors",
                   outcome === "draw"
                     ? "border-zinc-300 bg-zinc-600 text-white"
                     : "border-[#2a2a2a] bg-[#181818] text-zinc-400 hover:border-zinc-500"
                 )}
               >
-                Draw
+                <span>Draw</span>
+                <RatingSwingButtonFooter potential={potentialDraw} />
               </PickChoiceButton>
             )}
             <div className="relative overflow-visible">
               <PickChoiceButton
                 selected={outcome === "fighterB"}
+                savedMatch={savedOutcome === "fighterB" && outcome === "fighterB"}
                 variant="blue"
                 onClick={() => selectOutcome("fighterB", "right")}
                 impactClass={
                   impact?.side === "right" ? "pick-button-compress" : undefined
                 }
                 className={cn(
-                  "relative z-10 w-full rounded-xl py-3 text-xs font-bold uppercase tracking-wide transition-colors",
+                  "relative z-10 flex w-full flex-col items-center gap-0.5 rounded-xl px-1 py-2.5 text-xs font-bold uppercase tracking-wide transition-colors",
                   outcome === "fighterB"
                     ? "bg-blue-600 text-white"
                     : "bg-blue-600/90 text-white hover:bg-blue-500"
                 )}
               >
-                Pick {getFighterSurname(fight.fighter_b_name)}
+                <span>
+                  {getPickButtonLabel(
+                    "fighterB",
+                    getFighterSurname(fight.fighter_b_name),
+                    savedOutcome,
+                    outcome
+                  )}
+                </span>
+                <RatingSwingButtonFooter potential={potentialFighterB} />
               </PickChoiceButton>
               {impact?.side === "right" && (
                 <PickImpactOverlay config={impact} />
@@ -453,6 +629,11 @@ export function FightCard({
             onRoundChange={setRound}
             expanded={advancedOpen}
             onToggle={() => setAdvancedOpen(!advancedOpen)}
+            ratingNote={
+              advancedOpen && activePotential ? (
+                <AdvancedRatingNote potential={activePotential} />
+              ) : null
+            }
           />
 
           {error && (
@@ -468,6 +649,7 @@ export function FightCard({
             method={method}
             round={round}
             pending={pending}
+            activePotential={activePotential}
             onSubmit={handleSubmit}
           />
 

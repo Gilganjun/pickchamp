@@ -243,6 +243,77 @@ body {
   --pick-glow-soft: rgba(161, 161, 170, 0.3);
 }
 
+/* Saved pick — static button glow (name area carries motion) */
+.pick-choice-selected--saved-static {
+  animation: none;
+  box-shadow:
+    0 0 0 3px var(--pick-ring-color),
+    0 0 14px var(--pick-glow-color);
+}
+
+/* Fighter name column — at-a-glance pick */
+@keyframes selected-name-pulse {
+  0%,
+  100% {
+    opacity: 0.92;
+    text-shadow: 0 0 0 transparent;
+  }
+  50% {
+    opacity: 1;
+    text-shadow: 0 0 12px var(--fighter-pick-glow);
+  }
+}
+
+.selected-pick-badge {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.fighter-column-selected-saved--red {
+  --fighter-pick-glow: rgba(248, 113, 113, 0.55);
+  --fighter-pick-accent: #f87171;
+}
+
+.fighter-column-selected-saved--blue {
+  --fighter-pick-glow: rgba(96, 165, 250, 0.55);
+  --fighter-pick-accent: #60a5fa;
+}
+
+.fighter-column-selected-saved .fighter-pick-name {
+  color: #ffffff;
+  text-shadow: 0 0 10px var(--fighter-pick-glow);
+  border-bottom: 2px solid var(--fighter-pick-accent);
+  padding-bottom: 2px;
+  animation: selected-name-pulse 2.4s ease-in-out infinite;
+}
+
+.fighter-column-selected-saved .selected-pick-badge {
+  color: var(--fighter-pick-accent);
+}
+
+.fighter-column-selected-draft .selected-pick-badge {
+  color: #fbbf24;
+}
+
+.fighter-column-selected-draft .fighter-pick-name {
+  color: #fafafa;
+}
+
+.fighter-column-dimmed {
+  opacity: 0.68;
+  transition: opacity 0.2s ease;
+}
+
+.fighter-column-dimmed .fighter-pick-name,
+.fighter-column-dimmed .text-zinc-500 {
+  color: #71717a;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pick-impact-glove,
   .pick-impact-burst {
@@ -258,5 +329,16 @@ body {
     box-shadow:
       0 0 0 4px var(--pick-ring-color),
       0 0 16px var(--pick-glow-color);
+  }
+
+  .pick-choice-selected--saved-static {
+    box-shadow:
+      0 0 0 4px var(--pick-ring-color),
+      0 0 16px var(--pick-glow-color);
+  }
+
+  .fighter-column-selected-saved .fighter-pick-name {
+    animation: none;
+    text-shadow: 0 0 8px var(--fighter-pick-glow);
   }
 }

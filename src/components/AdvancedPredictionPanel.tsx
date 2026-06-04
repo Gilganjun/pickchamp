@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type { PredictedMethod, Sport } from "@/types";
 
 const BASE_METHODS: { id: PredictedMethod; label: string }[] = [
@@ -19,6 +20,7 @@ interface AdvancedPredictionPanelProps {
   expanded: boolean;
   onToggle: () => void;
   disabled?: boolean;
+  ratingNote?: ReactNode;
 }
 
 export function AdvancedPredictionPanel({
@@ -31,6 +33,7 @@ export function AdvancedPredictionPanel({
   expanded,
   onToggle,
   disabled,
+  ratingNote,
 }: AdvancedPredictionPanelProps) {
   const methods =
     sport === "mma"
@@ -53,6 +56,7 @@ export function AdvancedPredictionPanel({
 
       {expanded && (
         <div className="mt-3 space-y-4">
+          {ratingNote}
           <div>
             <label className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-zinc-500">
               Method (optional)
