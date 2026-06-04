@@ -9,12 +9,11 @@ import {
   type ReactNode,
 } from "react";
 import {
-  CurrentPickSummary,
   PickFistLine,
+  PickLockSection,
   PickRatingSwingCard,
   RatingPointsGuide,
   RatingSwingButtonFooter,
-  UpdatePickButton,
 } from "@/components/picks/PickRatingSwing";
 import {
   getMaxMethodRoundExtra,
@@ -24,11 +23,13 @@ import {
 import { PickImpactOverlay } from "@/components/picks/PickImpactOverlay";
 import {
   createPickImpactConfig,
-  PICK_IMPACT_DURATION_MS,
+  getPickImpactComboDurationMs,
+  PICK_IMPACT_COMBO_GAP_MS,
+  rollPickImpactComboCount,
   type PickImpactConfig,
   type PickImpactSide,
 } from "@/components/picks/pickImpact";
-import { playPickImpactSound } from "@/lib/audio/playPickImpactSound";
+import { playPickImpactCombo } from "@/lib/audio/playPickImpactSound";
 import { savePrediction } from "@/lib/data/fights";
 import { MOCK_USER_ID } from "@/data/mock";
 import { formatPickLine } from "@/lib/profile/display";
@@ -54,6 +55,16 @@ interface FightCardProps {
   onSaved?: () => void;
   /** Picks page only — glove impact on fighter pick buttons */
   enablePickImpact?: boolean;
+}
+
+function getPickFighterName(
+  fight: FightWithRelations,
+  outcome: PredictedOutcome | null
+): string | null {
+  if (!outcome) return null;
+  if (outcome === "fighterA") return fight.fighter_a_name;
+  if (outcome === "fighterB") return fight.fighter_b_name;
+  return "Draw";
 }
 
 function pickIsDirty(
@@ -215,14 +226,17 @@ export function FightCard({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [impact, setImpact] = useState<PickImpactConfig | null>(null);
-  const impactTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const impactTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const clearPickImpactTimeouts = () => {
+    for (const id of impactTimeoutsRef.current) {
+      clearTimeout(id);
+    }
+    impactTimeoutsRef.current = [];
+  };
 
   useEffect(() => {
-    return () => {
-      if (impactTimeoutRef.current) {
-        clearTimeout(impactTimeoutRef.current);
-      }
-    };
+    return () => clearPickImpactTimeouts();
   }, []);
 
   useEffect(() => {
@@ -238,16 +252,22 @@ export function FightCard({
 
   const firePickImpact = (side: PickImpactSide) => {
     if (!enablePickImpact) return;
-    if (impactTimeoutRef.current) {
-      clearTimeout(impactTimeoutRef.current);
+    clearPickImpactTimeouts();
+
+    const hitCount = rollPickImpactComboCount();
+    playPickImpactCombo(hitCount, PICK_IMPACT_COMBO_GAP_MS);
+
+    for (let i = 0; i < hitCount; i++) {
+      const punchTimeout = setTimeout(() => {
+        setImpact(createPickImpactConfig(side, i));
+      }, i * PICK_IMPACT_COMBO_GAP_MS);
+      impactTimeoutsRef.current.push(punchTimeout);
     }
-    const next = createPickImpactConfig(side);
-    setImpact(next);
-    playPickImpactSound();
-    impactTimeoutRef.current = setTimeout(() => {
+
+    const clearTimeoutId = setTimeout(() => {
       setImpact(null);
-      impactTimeoutRef.current = null;
-    }, PICK_IMPACT_DURATION_MS);
+    }, getPickImpactComboDurationMs(hitCount));
+    impactTimeoutsRef.current.push(clearTimeoutId);
   };
 
   const selectOutcome = (next: PredictedOutcome, side?: PickImpactSide) => {
@@ -522,7 +542,7 @@ export function FightCard({
           </div>
 
           <div className="mt-4 overflow-hidden rounded-xl border border-[#2a2a2a] bg-[#181818]">
-            <CurrentPickSummary
+            <PickLockSection
               hasSaved={Boolean(existing)}
               dirty={pickIsDirty(existing, outcome, method, round)}
               savedLine={
@@ -535,11 +555,9 @@ export function FightCard({
                     )
                   : null
               }
-              draftLine={
-                outcome
-                  ? formatPickLine(fight, outcome, method, round)
-                  : null
-              }
+              pickName={getPickFighterName(fight, outcome)}
+              method={method}
+              round={round}
               showDraft={
                 Boolean(
                   outcome &&
@@ -547,6 +565,9 @@ export function FightCard({
                       pickIsDirty(existing, outcome, method, round))
                 )
               }
+              pending={pending}
+              disabled={pending || !outcome}
+              onSubmit={handleSubmit}
             />
           </div>
 
@@ -574,33 +595,12 @@ export function FightCard({
             />
           </div>
 
-          <div className="overflow-hidden rounded-xl border border-[#2a2a2a] bg-[#181818]">
-            <UpdatePickButton
-              pending={pending}
-              disabled={pending || !outcome}
-              hasSaved={Boolean(existing)}
-              dirty={pickIsDirty(existing, outcome, method, round)}
-              showDraft={
-                Boolean(
-                  outcome &&
-                    (!existing ||
-                      pickIsDirty(existing, outcome, method, round))
-                )
-              }
-              draftLine={
-                outcome
-                  ? formatPickLine(fight, outcome, method, round)
-                  : null
-              }
-              onSubmit={handleSubmit}
+          <div className="overflow-hidden rounded-xl border border-[#2a2a2a] bg-[#181818] p-4">
+            <RatingPointsGuide
+              potential={activePotential}
+              method={method}
+              round={round}
             />
-            <div className="p-4 pt-3">
-              <RatingPointsGuide
-                potential={activePotential}
-                method={method}
-                round={round}
-              />
-            </div>
           </div>
 
           {error && (

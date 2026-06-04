@@ -314,7 +314,37 @@ body {
   color: #71717a;
 }
 
+@keyframes pick-name-swipe {
+  0%,
+  82%,
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  86% {
+    opacity: 0;
+    transform: translateX(-18px);
+  }
+  90% {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  94% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.pick-name-swipe {
+  display: inline-block;
+  animation: pick-name-swipe 5s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .pick-name-swipe {
+    animation: none;
+  }
+
   .pick-impact-glove,
   .pick-impact-burst {
     display: none !important;

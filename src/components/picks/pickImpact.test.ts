@@ -1,5 +1,12 @@
-import { describe, expect, it } from "vitest";
-import { createPickImpactConfig, PICK_IMPACT_ASSETS } from "./pickImpact";
+import { describe, expect, it, vi } from "vitest";
+import {
+  createPickImpactConfig,
+  getPickImpactComboDurationMs,
+  PICK_IMPACT_ASSETS,
+  PICK_IMPACT_COMBO_GAP_MS,
+  PICK_IMPACT_DURATION_MS,
+  rollPickImpactComboCount,
+} from "./pickImpact";
 
 describe("createPickImpactConfig", () => {
   it("returns valid asset and variation ranges", () => {
@@ -15,5 +22,30 @@ describe("createPickImpactConfig", () => {
     expect(config.entryDistance).toBeGreaterThanOrEqual(36);
     expect(config.entryDistance).toBeLessThanOrEqual(56);
     expect(config.triggerKey).toBeGreaterThan(0);
+  });
+
+  it("uses distinct trigger keys per combo sequence index", () => {
+    const a = createPickImpactConfig("right", 0);
+    const b = createPickImpactConfig("right", 1);
+    expect(b.triggerKey).toBeGreaterThan(a.triggerKey);
+  });
+});
+
+describe("rollPickImpactComboCount", () => {
+  it("returns 1 through 4", () => {
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    expect(rollPickImpactComboCount()).toBe(1);
+    vi.spyOn(Math, "random").mockReturnValue(0.99);
+    expect(rollPickImpactComboCount()).toBe(4);
+    vi.restoreAllMocks();
+  });
+});
+
+describe("getPickImpactComboDurationMs", () => {
+  it("extends duration for multi-hit combos", () => {
+    expect(getPickImpactComboDurationMs(1)).toBe(PICK_IMPACT_DURATION_MS);
+    expect(getPickImpactComboDurationMs(4)).toBe(
+      3 * PICK_IMPACT_COMBO_GAP_MS + PICK_IMPACT_DURATION_MS
+    );
   });
 });

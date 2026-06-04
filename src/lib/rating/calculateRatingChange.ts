@@ -5,12 +5,11 @@ import {
   METHOD_WRONG_PENALTY,
   PERFECT_PICK_BONUS,
   ROUND_EXACT_BONUS,
-  ROUND_NEAR_BONUS,
   ROUND_WRONG_PENALTY,
 } from "./constants";
 import type { GradingDetails, PopularityDistribution } from "./gradingDetails";
 import { getEffectivePickTier } from "./getEffectivePickTier";
-import { clampNumber, isFinishMethod, isNearRound } from "./helpers";
+import { clampNumber, isFinishMethod } from "./helpers";
 import { getTierRatingValues } from "./tierRatings";
 import type { FavouriteLevel, FavouriteSide } from "./tierTypes";
 
@@ -177,9 +176,6 @@ export function calculateRatingChange(
     if (predictedRound === resultRound) {
       roundCorrect = true;
       roundAdjustment = ROUND_EXACT_BONUS;
-    } else if (isNearRound(predictedRound, resultRound)) {
-      roundCorrect = false;
-      roundAdjustment = ROUND_NEAR_BONUS;
     } else {
       roundCorrect = false;
       roundAdjustment = ROUND_WRONG_PENALTY;

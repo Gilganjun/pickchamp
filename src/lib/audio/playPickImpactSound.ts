@@ -41,3 +41,19 @@ export function playPickImpactSound(
     }
   }, delayMs);
 }
+
+/** One sound per combo hit, staggered to match punch timing. */
+export function playPickImpactCombo(
+  hitCount: number,
+  gapMs: number
+): void {
+  const followUpSoundOffsetMs = 50;
+  for (let i = 0; i < hitCount; i++) {
+    playPickImpactSound({
+      delayMs:
+        i === 0
+          ? PICK_IMPACT_SOUND_DELAY_MS
+          : i * gapMs + followUpSoundOffsetMs,
+    });
+  }
+}

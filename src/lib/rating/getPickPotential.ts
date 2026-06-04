@@ -4,7 +4,6 @@ import {
   METHOD_WRONG_PENALTY,
   PERFECT_PICK_BONUS,
   ROUND_EXACT_BONUS,
-  ROUND_NEAR_BONUS,
   ROUND_WRONG_PENALTY,
 } from "./constants";
 import type { PredictedMethod, PredictedOutcome } from "./calculateRatingChange";
@@ -191,8 +190,6 @@ export function getRatingScenarios(potential: PickPotential): RatingScenario[] {
   const withMethodWrongRound = clampGain(
     base + METHOD_CORRECT_BONUS + ROUND_WRONG_PENALTY
   );
-  const withNearRound = clampGain(base + METHOD_CORRECT_BONUS + ROUND_NEAR_BONUS);
-
   return [
     {
       id: "wrong-fighter",
@@ -223,13 +220,6 @@ export function getRatingScenarios(potential: PickPotential): RatingScenario[] {
       headline: "Your fighter wins + wrong method",
       detail: "Right winner, but the way they win is incorrect.",
       points: clampGain(base + METHOD_WRONG_PENALTY),
-      kind: "gain",
-    },
-    {
-      id: "winner-method-near-round",
-      headline: "Your fighter wins + method right + round within 1",
-      detail: "Close on the round (stoppage fights only).",
-      points: withNearRound,
       kind: "gain",
     },
     {

@@ -300,46 +300,91 @@ export function RatingPointsGuide({
   );
 }
 
-export function CurrentPickSummary({
+function formatMethodRoundHint(
+  method: PredictedMethod | null,
+  round: number | null
+): string {
+  if (!method) {
+    return "No method selected — choose below (optional)";
+  }
+  const parts = [`Method: ${methodLabel(method)}`];
+  if (round != null) {
+    parts.push(`Round ${round}`);
+  }
+  return parts.join(" · ");
+}
+
+function PickNameSwipe({ name }: { name: string }) {
+  return (
+    <p className="mt-2 overflow-hidden text-xl font-black leading-tight tracking-tight text-white sm:text-2xl">
+      <span className="pick-name-swipe">{name}</span>
+    </p>
+  );
+}
+
+export function PickLockSection({
   hasSaved,
   dirty,
   savedLine,
-  draftLine,
+  pickName,
+  method,
+  round,
   showDraft,
+  pending,
+  disabled,
+  onSubmit,
 }: {
   hasSaved: boolean;
   dirty: boolean;
   savedLine: string | null;
-  draftLine: string | null;
+  pickName: string | null;
+  method: PredictedMethod | null;
+  round: number | null;
   showDraft: boolean;
+  pending: boolean;
+  disabled: boolean;
+  onSubmit: () => void;
 }) {
+  const methodHint = formatMethodRoundHint(method, round);
+  const showLockButton = showDraft || hasSaved;
+  const buttonLabel = pending
+    ? "Saving…"
+    : hasSaved
+      ? dirty
+        ? "Save updated pick"
+        : "Update my pick"
+      : "Lock my pick";
+
   return (
-    <div className="border-b border-[#2a2a2a] px-4 py-3">
+    <div className="px-4 py-4">
       {hasSaved ? (
         <>
           <p className="text-[10px] font-bold uppercase tracking-wider text-green-500">
             Your current pick
           </p>
-          <p className="mt-1 text-sm font-bold leading-snug text-white">
-            {savedLine}
-          </p>
-          {dirty && showDraft ? (
+          {pickName ? (
+            <PickNameSwipe name={pickName} />
+          ) : (
+            <p className="mt-1 text-sm font-bold leading-snug text-white">
+              {savedLine}
+            </p>
+          )}
+          <p className="mt-2 text-[11px] text-zinc-400">{methodHint}</p>
+          {dirty && showDraft && savedLine ? (
             <p className="mt-2 text-[11px] text-amber-400">
               <span className="font-semibold uppercase tracking-wide">
-                Unsaved change →{" "}
+                Unsaved change
               </span>
-              {draftLine}
             </p>
           ) : null}
         </>
-      ) : showDraft ? (
+      ) : showDraft && pickName ? (
         <>
           <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
             Ready to lock
           </p>
-          <p className="mt-1 text-sm font-bold leading-snug text-white">
-            {draftLine}
-          </p>
+          <PickNameSwipe name={pickName} />
+          <p className="mt-2 text-[11px] text-zinc-400">{methodHint}</p>
         </>
       ) : (
         <>
@@ -351,53 +396,24 @@ export function CurrentPickSummary({
           </p>
         </>
       )}
-    </div>
-  );
-}
 
-export function UpdatePickButton({
-  pending,
-  disabled,
-  hasSaved,
-  dirty,
-  showDraft,
-  draftLine,
-  onSubmit,
-}: {
-  pending: boolean;
-  disabled: boolean;
-  hasSaved: boolean;
-  dirty: boolean;
-  showDraft: boolean;
-  draftLine: string | null;
-  onSubmit: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onSubmit}
-      disabled={disabled}
-      className="flex w-full flex-col items-center gap-0.5 border-b border-[#2a2a2a] bg-white px-4 py-3.5 text-black transition-opacity hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
-    >
-      <span className="text-sm font-bold uppercase tracking-wide">
-        {pending
-          ? "Saving…"
-          : hasSaved
-            ? dirty
-              ? "Save updated pick"
-              : "Update my pick"
-            : "Lock my pick"}
-      </span>
-      {showDraft && !pending ? (
-        <span className="text-[10px] font-medium normal-case text-zinc-600">
-          {dirty ? "Confirm change: " : "Will lock: "}
-          {draftLine}
-        </span>
-      ) : hasSaved && !dirty && !pending ? (
-        <span className="text-[10px] font-medium normal-case text-zinc-600">
-          Tap a fighter above to change, then save
-        </span>
+      {showLockButton ? (
+        <button
+          type="button"
+          onClick={onSubmit}
+          disabled={disabled}
+          className="mt-4 flex w-full flex-col items-center gap-0.5 rounded-xl bg-white px-4 py-3.5 text-black transition-opacity hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <span className="text-sm font-bold uppercase tracking-wide">
+            {buttonLabel}
+          </span>
+          {hasSaved && !dirty && !pending ? (
+            <span className="text-[10px] font-medium normal-case text-zinc-600">
+              Tap a fighter above to change, then save
+            </span>
+          ) : null}
+        </button>
       ) : null}
-    </button>
+    </div>
   );
 }

@@ -3,6 +3,7 @@ import {
   PICK_IMPACT_SOUND_DELAY_MS,
   PICK_IMPACT_SOUNDS,
   PICK_IMPACT_SOUND_VOLUME,
+  playPickImpactCombo,
   playPickImpactSound,
 } from "./playPickImpactSound";
 
@@ -17,5 +18,6 @@ describe("playPickImpactSound", () => {
 
   it("does not throw when window is undefined", () => {
     expect(() => playPickImpactSound()).not.toThrow();
+    expect(() => playPickImpactCombo(3, 220)).not.toThrow();
   });
 });

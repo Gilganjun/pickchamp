@@ -4,7 +4,6 @@ export const METHOD_CORRECT_BONUS = 4;
 export const METHOD_WRONG_PENALTY = -2;
 
 export const ROUND_EXACT_BONUS = 8;
-export const ROUND_NEAR_BONUS = 3;
 export const ROUND_WRONG_PENALTY = -3;
 
 export const PERFECT_PICK_BONUS = 5;

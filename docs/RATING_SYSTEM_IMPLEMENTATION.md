@@ -28,7 +28,7 @@ baseGain = clamp(10 × ((1 - p) / p), +3, +60)
 | Admin field validation | `src/lib/rating/validateFavouriteFields.ts` |
 | Grading audit shape | `src/lib/rating/gradingDetails.ts` |
 | Sub-pick constants & clamps | `src/lib/rating/constants.ts` |
-| Helpers (clamp, near round) | `src/lib/rating/helpers.ts` |
+| Helpers (clamp, finish method) | `src/lib/rating/helpers.ts` |
 | Tests | `src/lib/rating/calculateRatingChange.test.ts`, `getEffectivePickTier.test.ts` |
 | Batch grading | `src/lib/grading/gradeFight.ts` |
 
@@ -117,7 +117,6 @@ Only apply when main pick is correct.
 |-----|---------|-------|--------------|
 | Method | +4 | -2 | 0 |
 | Round exact | +8 | — | — |
-| Round near (±1) | +3 | — | — |
 | Round wrong | -3 | — | — |
 | Perfect | +5 | — | requires main + method + exact round |
 
