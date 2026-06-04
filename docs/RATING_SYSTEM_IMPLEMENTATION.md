@@ -1,4 +1,4 @@
-# PickChamp Rating System — Implementation Reference (V2)
+# PickFist Rating System — Implementation Reference (V2)
 
 This document describes the **difficulty-based** rating system (V2). Popularity no longer affects `ratingChange`.
 
@@ -12,7 +12,7 @@ This document describes the **difficulty-based** rating system (V2). Popularity 
 baseGain = clamp(10 × ((1 - p) / p), +3, +60)
 ```
 
-**Problem:** This measured how many PickChamp users agreed with you, not real-world fight difficulty. Example: Fury vs Usyk (genuinely even) with 85% Fury picks → Usyk winner got maximum rarity reward.
+**Problem:** This measured how many PickFist users agreed with you, not real-world fight difficulty. Example: Fury vs Usyk (genuinely even) with 85% Fury picks → Usyk winner got maximum rarity reward.
 
 **V2:** Admin sets `favourite_side` + `favourite_level`. Each user pick maps to an **effective tier**. Base score comes from a fixed table. Popularity is stored for analytics only.
 

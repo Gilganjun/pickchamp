@@ -5,7 +5,9 @@ import {
   upsertMockPrediction,
 } from "@/data/mock";
 import { hasSupabaseConfig } from "@/lib/config";
+import { getMockEvents } from "@/data/mock";
 import type {
+  Event,
   FightWithRelations,
   PickTab,
   Prediction,
@@ -15,10 +17,37 @@ import type {
 } from "@/types";
 import { inferFightTab } from "@/lib/utils";
 
+export type EventCardFilter = "all" | string;
+
+function filterFightsForPicksView(
+  fights: FightWithRelations[],
+  tab: PickTab,
+  sportFilter: SportFilter,
+  eventFilter: EventCardFilter
+): FightWithRelations[] {
+  return fights
+    .filter((f) => inferFightTab(f.status, f.lock_time) === tab)
+    .filter((f) => sportFilter === "all" || f.sport === sportFilter)
+    .filter((f) => eventFilter === "all" || f.event_id === eventFilter)
+    .sort((a, b) => {
+      const eventDiff =
+        new Date(a.event.event_date).getTime() -
+        new Date(b.event.event_date).getTime();
+      if (eventDiff !== 0) return eventDiff;
+      const orderA = a.fight_order ?? 999;
+      const orderB = b.fight_order ?? 999;
+      if (orderA !== orderB) return orderA - orderB;
+      return (
+        new Date(a.lock_time).getTime() - new Date(b.lock_time).getTime()
+      );
+    });
+}
+
 export async function getFightsForPicks(
   tab: PickTab,
   sportFilter: SportFilter,
-  userId?: string
+  userId?: string,
+  eventFilter: EventCardFilter = "all"
 ): Promise<FightWithRelations[]> {
   const effectiveUserId = userId ?? MOCK_USER_ID;
   let fights = getMockFightWithRelations(effectiveUserId);
@@ -28,12 +57,43 @@ export async function getFightsForPicks(
     fights = getMockFightWithRelations(effectiveUserId);
   }
 
-  return fights
-    .filter((f) => inferFightTab(f.status, f.lock_time) === tab)
-    .filter((f) => sportFilter === "all" || f.sport === sportFilter)
+  return filterFightsForPicksView(fights, tab, sportFilter, eventFilter);
+}
+
+/** Events that have at least one fight in the current picks tab + sport filter */
+export async function getEventsForPicks(
+  tab: PickTab,
+  sportFilter: SportFilter,
+  userId?: string
+): Promise<Event[]> {
+  const fights = await getFightsForPicks(tab, sportFilter, userId, "all");
+  const eventIds = [...new Set(fights.map((f) => f.event_id))];
+  return getMockEvents()
+    .filter((e) => eventIds.includes(e.id))
     .sort(
       (a, b) =>
-        new Date(a.lock_time).getTime() - new Date(b.lock_time).getTime()
+        new Date(a.event_date).getTime() - new Date(b.event_date).getTime()
+    );
+}
+
+export function groupFightsByEvent(
+  fights: FightWithRelations[]
+): { event: Event; fights: FightWithRelations[] }[] {
+  const map = new Map<string, FightWithRelations[]>();
+  for (const fight of fights) {
+    const list = map.get(fight.event_id) ?? [];
+    list.push(fight);
+    map.set(fight.event_id, list);
+  }
+  return [...map.entries()]
+    .map(([, cardFights]) => ({
+      event: cardFights[0].event,
+      fights: cardFights,
+    }))
+    .sort(
+      (a, b) =>
+        new Date(a.event.event_date).getTime() -
+        new Date(b.event.event_date).getTime()
     );
 }
 

@@ -1,4 +1,4 @@
-# PickChamp
+# PickFist
 
 **You Don't Know S\*\*\* About Fighting.**
 
@@ -34,7 +34,7 @@ That means **CSS did not load**, usually because:
 
 ```powershell
 # Stop all Node dev servers, then:
-cd path\to\PickChamp_Cursor
+cd path\to\your-project-folder
 Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue
 npm run dev
 ```

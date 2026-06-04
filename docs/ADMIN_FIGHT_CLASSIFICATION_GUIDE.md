@@ -1,8 +1,8 @@
-# PickChamp — Admin Fight Classification Guide
+# PickFist — Admin Fight Classification Guide
 
 This guide explains how to set **Favourite Side** and **Favourite Level** when creating or editing fights in the admin dashboard.
 
-These fields control how user predictions are scored. They describe **real-world fight difficulty**, not how many PickChamp users pick each fighter.
+These fields control how user predictions are scored. They describe **real-world fight difficulty**, not how many PickFist users pick each fighter.
 
 ---
 
@@ -100,7 +100,7 @@ Do **not** use Heavy Favourite for every fight where one name is better known. U
 - **Favourite Side:** None  
 - **Favourite Level:** Even  
 
-Regardless of whether British or American users heavily pick Fury on PickChamp, **do not** tag Fury as Heavy Favourite just because the crowd favours him. Crowd bias is visible in analytics; your job is real-world difficulty.
+Regardless of whether British or American users heavily pick Fury on PickFist, **do not** tag Fury as Heavy Favourite just because the crowd favours him. Crowd bias is visible in analytics; your job is real-world difficulty.
 
 ---
 
@@ -152,7 +152,7 @@ Before saving a fight, ask:
 3. **Is it genuinely ~40–60% either way?**  
    - Yes → None + Even  
 
-4. **Am I copying PickChamp pick counts?**  
+4. **Am I copying PickFist pick counts?**  
    - If yes, stop. Use fight knowledge, records, styles, and market context—not current app popularity.
 
 ---
@@ -186,7 +186,7 @@ If the fight is already **settled and graded:** changing fields does not retroac
 | Favourite | ~60–79% fav | Fighter A or B | Favourite |
 | Heavy Favourite | ~80%+ fav | Fighter A or B | Heavy Favourite |
 
-**Remember:** Accurate classification keeps PickChamp fair. When in doubt between Favourite and Even, choose **Even** rather than inflating favourite strength.
+**Remember:** Accurate classification keeps PickFist fair. When in doubt between Favourite and Even, choose **Even** rather than inflating favourite strength.
 
 ---
 

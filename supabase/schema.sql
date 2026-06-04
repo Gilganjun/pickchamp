@@ -1,4 +1,4 @@
--- PickChamp MVP Schema
+-- PickFist MVP Schema
 -- Apply in Supabase SQL Editor
 
 create extension if not exists "uuid-ossp";

@@ -1,4 +1,5 @@
 import { ProgressBar } from "@/components/profile/ProgressBar";
+import { RatingTierBlock } from "@/components/profile/RatingTierBlock";
 import {
   formatRankStatus,
   getEligibilityThreshold,
@@ -54,8 +55,7 @@ export function SportBreakdownCard({
           {meta.label}
         </h2>
       </div>
-      <p className="mt-3 text-xs text-zinc-500">Rating</p>
-      <p className="text-2xl font-black tabular-nums text-white">{rating}</p>
+      <RatingTierBlock rating={rating} compact />
 
       {rank.status === "inactive" && (
         <>

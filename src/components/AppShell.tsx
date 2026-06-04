@@ -21,7 +21,7 @@ export function AppShell({
 }: AppShellProps) {
   return (
     <div className="min-h-dvh w-full pb-24">
-      <main className={cn("pickchamp-content", prominentBrand && "pt-0")}>
+      <main className={cn("pickfist-content", prominentBrand && "pt-0")}>
         {showBrand && (
           <BrandHeader
             showTagline={showTagline}

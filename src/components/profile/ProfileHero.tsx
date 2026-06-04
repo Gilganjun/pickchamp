@@ -1,5 +1,5 @@
 import { BrandHeader } from "@/components/BrandHeader";
-import { getPredictorTitle } from "@/lib/profile/display";
+import { RatingTierBlock } from "@/components/profile/RatingTierBlock";
 import type { Profile } from "@/types";
 
 interface ProfileHeroProps {
@@ -8,7 +8,6 @@ interface ProfileHeroProps {
 }
 
 export function ProfileHero({ profile, subtitle }: ProfileHeroProps) {
-  const title = getPredictorTitle(profile.global_rating);
   const initials =
     profile.avatar_initials ?? profile.username.slice(0, 2).toUpperCase();
 
@@ -24,13 +23,7 @@ export function ProfileHero({ profile, subtitle }: ProfileHeroProps) {
       {subtitle && (
         <p className="mt-1 text-[11px] text-zinc-500">{subtitle}</p>
       )}
-      <p className="mt-5 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-        Fight Rating
-      </p>
-      <p className="mt-1 text-4xl font-black tabular-nums text-white">
-        {profile.global_rating}
-      </p>
-      <p className="mt-2 text-sm font-semibold text-[#d4a853]">{title}</p>
+      <RatingTierBlock rating={profile.global_rating} />
     </section>
   );
 }

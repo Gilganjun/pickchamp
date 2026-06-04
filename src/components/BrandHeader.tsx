@@ -44,7 +44,7 @@ export function BrandHeader({
             prominent ? "text-3xl" : compact ? "text-lg" : "text-xl"
           )}
         >
-          CHAMP
+          FIST
           <span
             className={cn(
               "absolute left-1/2 -translate-x-1/2 text-red-500",

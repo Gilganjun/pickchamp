@@ -6,7 +6,7 @@ export default function LandingPage() {
       <div className="max-w-md">
         <h1 className="text-4xl font-black tracking-tight">
           <span className="text-white">PICK</span>
-          <span className="text-red-500">CHAMP</span>
+          <span className="text-red-500">FIST</span>
         </h1>
         <p className="mt-4 text-lg text-zinc-400 leading-relaxed">
           You Don&apos;t Know S*** About Fighting.

@@ -12,10 +12,25 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteTitle = "PickFist — Fight Prediction Rankings";
+const siteDescription =
+  "You Don't Know S*** About Fighting. Global combat-sports prediction competition.";
+
 export const metadata: Metadata = {
-  title: "PickChamp — Prove Your Fight Knowledge",
-  description:
-    "You Don't Know S*** About Fighting. Global combat-sports prediction competition.",
+  title: siteTitle,
+  description: siteDescription,
+  applicationName: "PickFist",
+  openGraph: {
+    title: siteTitle,
+    description: siteDescription,
+    siteName: "PickFist",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: siteTitle,
+    description: siteDescription,
+  },
 };
 
 export default function RootLayout({

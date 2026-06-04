@@ -3,7 +3,7 @@ import Link from "next/link";
 export default function AdminDashboardPage() {
   return (
     <div className="min-h-dvh bg-zinc-950 p-6 text-white">
-      <h1 className="text-2xl font-bold">PickChamp Admin</h1>
+      <h1 className="text-2xl font-bold">PickFist Admin</h1>
       <p className="mt-2 text-sm text-zinc-400">
         MVP admin (mock mode). Secured via profiles.is_admin or ADMIN_EMAILS
         when Supabase is connected.

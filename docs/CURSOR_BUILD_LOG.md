@@ -1,4 +1,4 @@
-# PickChamp — Cursor Build Log
+# PickFist — Cursor Build Log
 
 Build date: 2026-06-03
 

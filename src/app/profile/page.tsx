@@ -34,7 +34,7 @@ export default async function ProfilePage() {
         ranks={ranks}
         predictions={predictions}
         fights={fights}
-        subtitle="Demo user (mock mode)"
+        subtitle="PickFist demo (mock mode)"
       />
     </AppShell>
   );

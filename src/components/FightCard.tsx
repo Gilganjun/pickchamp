@@ -1,6 +1,14 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { PickImpactOverlay } from "@/components/picks/PickImpactOverlay";
+import {
+  createPickImpactConfig,
+  PICK_IMPACT_DURATION_MS,
+  type PickImpactConfig,
+  type PickImpactSide,
+} from "@/components/picks/pickImpact";
+import { playPickImpactSound } from "@/lib/audio/playPickImpactSound";
 import { savePrediction } from "@/lib/data/fights";
 import { MOCK_USER_ID } from "@/data/mock";
 import {
@@ -20,9 +28,15 @@ import { AdvancedPredictionPanel } from "./AdvancedPredictionPanel";
 interface FightCardProps {
   fight: FightWithRelations;
   onSaved?: () => void;
+  /** Picks page only — glove impact on fighter pick buttons */
+  enablePickImpact?: boolean;
 }
 
-export function FightCard({ fight, onSaved }: FightCardProps) {
+export function FightCard({
+  fight,
+  onSaved,
+  enablePickImpact = false,
+}: FightCardProps) {
   const locked = isFightLocked(fight);
   const settled = fight.status === "settled";
   const existing = fight.userPrediction;
@@ -41,6 +55,35 @@ export function FightCard({ fight, onSaved }: FightCardProps) {
   );
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [impact, setImpact] = useState<PickImpactConfig | null>(null);
+  const impactTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (impactTimeoutRef.current) {
+        clearTimeout(impactTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const firePickImpact = (side: PickImpactSide) => {
+    if (!enablePickImpact) return;
+    if (impactTimeoutRef.current) {
+      clearTimeout(impactTimeoutRef.current);
+    }
+    const next = createPickImpactConfig(side);
+    setImpact(next);
+    playPickImpactSound();
+    impactTimeoutRef.current = setTimeout(() => {
+      setImpact(null);
+      impactTimeoutRef.current = null;
+    }, PICK_IMPACT_DURATION_MS);
+  };
+
+  const selectOutcome = (next: PredictedOutcome, side?: PickImpactSide) => {
+    if (side) firePickImpact(side);
+    setOutcome(next);
+  };
 
   const sportColor = fight.sport === "boxing" ? "bg-red-600" : "bg-purple-600";
   const sportBorder =
@@ -74,7 +117,7 @@ export function FightCard({ fight, onSaved }: FightCardProps) {
   return (
     <article
       className={cn(
-        "rounded-2xl border bg-[#111111] p-4 shadow-sm",
+        "overflow-visible rounded-2xl border bg-[#111111] p-4 shadow-sm",
         sportBorder
       )}
     >
@@ -164,22 +207,28 @@ export function FightCard({ fight, onSaved }: FightCardProps) {
         <>
           <div
             className={cn(
-              "mt-4 grid gap-2",
+              "mt-4 grid gap-2 overflow-visible",
               fight.sport === "boxing" ? "grid-cols-3" : "grid-cols-2"
             )}
           >
-            <button
-              type="button"
-              onClick={() => setOutcome("fighterA")}
-              className={cn(
-                "rounded-xl py-3 text-xs font-bold uppercase tracking-wide transition-colors",
-                outcome === "fighterA"
-                  ? "bg-red-600 text-white ring-2 ring-red-400"
-                  : "bg-red-600/90 text-white hover:bg-red-500"
+            <div className="relative overflow-visible">
+              <button
+                type="button"
+                onClick={() => selectOutcome("fighterA", "left")}
+                className={cn(
+                  "relative z-10 w-full rounded-xl py-3 text-xs font-bold uppercase tracking-wide transition-colors",
+                  outcome === "fighterA"
+                    ? "bg-red-600 text-white ring-2 ring-red-400"
+                    : "bg-red-600/90 text-white hover:bg-red-500",
+                  impact?.side === "left" && "pick-button-compress"
+                )}
+              >
+                Pick {getFighterSurname(fight.fighter_a_name)}
+              </button>
+              {impact?.side === "left" && (
+                <PickImpactOverlay config={impact} />
               )}
-            >
-              Pick {getFighterSurname(fight.fighter_a_name)}
-            </button>
+            </div>
             {fight.sport === "boxing" && (
               <button
                 type="button"
@@ -194,18 +243,24 @@ export function FightCard({ fight, onSaved }: FightCardProps) {
                 Draw
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => setOutcome("fighterB")}
-              className={cn(
-                "rounded-xl py-3 text-xs font-bold uppercase tracking-wide transition-colors",
-                outcome === "fighterB"
-                  ? "bg-blue-600 text-white ring-2 ring-blue-400"
-                  : "bg-blue-600/90 text-white hover:bg-blue-500"
+            <div className="relative overflow-visible">
+              <button
+                type="button"
+                onClick={() => selectOutcome("fighterB", "right")}
+                className={cn(
+                  "relative z-10 w-full rounded-xl py-3 text-xs font-bold uppercase tracking-wide transition-colors",
+                  outcome === "fighterB"
+                    ? "bg-blue-600 text-white ring-2 ring-blue-400"
+                    : "bg-blue-600/90 text-white hover:bg-blue-500",
+                  impact?.side === "right" && "pick-button-compress"
+                )}
+              >
+                Pick {getFighterSurname(fight.fighter_b_name)}
+              </button>
+              {impact?.side === "right" && (
+                <PickImpactOverlay config={impact} />
               )}
-            >
-              Pick {getFighterSurname(fight.fighter_b_name)}
-            </button>
+            </div>
           </div>
 
           <AdvancedPredictionPanel
