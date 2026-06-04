@@ -68,8 +68,8 @@ Copy `.env.example` to `.env.local`:
 
 Built-in mock content lives in `src/data/mock.ts`:
 
-- Events: Riyadh Season, UFC London, World Title Boxing Night, etc.
-- Fights: Fury vs Usyk (12 rds), Crawford vs Spence (12 rds), Jones vs Aspinall (5 rds), etc.
+- Events: **Steel City King** (Sheffield, 6 Jun 2026) and **UFC Fight Night: Muhammad vs. Bonfim** (Las Vegas, 6 Jun 2026)
+- Full bout lists with real calendar dates (no relative mock time offsets for cards)
 - Demo user: `fightfan42` (`MOCK_USER_ID`)
 
 ## Scripts
