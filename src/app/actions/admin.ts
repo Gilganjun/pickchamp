@@ -32,6 +32,7 @@ export async function createEvent(formData: FormData): Promise<void> {
     name: String(formData.get("name") ?? ""),
     promotion: (formData.get("promotion") as string) || null,
     location: (formData.get("location") as string) || null,
+    timezone: (formData.get("timezone") as string) || null,
     event_date: String(formData.get("event_date") ?? new Date().toISOString()),
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),

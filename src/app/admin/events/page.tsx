@@ -1,5 +1,6 @@
 import { createEvent, getAdminData } from "@/app/actions/admin";
 import { AdminFormSection } from "@/components/AdminFormSection";
+import { formatEventDateTime } from "@/lib/datetime";
 import Link from "next/link";
 
 export default async function AdminEventsPage() {
@@ -38,6 +39,14 @@ export default async function AdminEventsPage() {
               />
             </label>
             <label className="block text-xs text-zinc-400">
+              Timezone (IANA, optional)
+              <input
+                name="timezone"
+                placeholder="e.g. Europe/London"
+                className="mt-1 w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="block text-xs text-zinc-400">
               Event date *
               <input
                 name="event_date"
@@ -59,7 +68,7 @@ export default async function AdminEventsPage() {
       <ul className="mt-8 space-y-2 text-sm">
         {events.map((e) => (
           <li key={e.id} className="border-b border-zinc-800 py-2">
-            {e.name} — {new Date(e.event_date).toLocaleString()}
+            {e.name} — {formatEventDateTime(e)}
           </li>
         ))}
       </ul>

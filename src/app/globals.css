@@ -198,6 +198,51 @@ body {
   animation: pick-impact-flash-reduced 330ms ease-out forwards;
 }
 
+/* Selected fighter / draw pick — prominent outline + glow pulse */
+@keyframes pick-choice-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px var(--pick-ring-color),
+      0 0 14px var(--pick-glow-color),
+      0 0 28px var(--pick-glow-soft);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow:
+      0 0 0 4px var(--pick-ring-color),
+      0 0 22px var(--pick-glow-color),
+      0 0 40px var(--pick-glow-soft);
+    transform: scale(1.02);
+  }
+}
+
+.pick-choice-selected {
+  position: relative;
+  z-index: 11;
+  outline: 3px solid var(--pick-ring-color);
+  outline-offset: 2px;
+  animation: pick-choice-pulse 1.6s ease-in-out infinite;
+}
+
+.pick-choice-selected--red {
+  --pick-ring-color: #fecaca;
+  --pick-glow-color: rgba(239, 68, 68, 0.85);
+  --pick-glow-soft: rgba(239, 68, 68, 0.35);
+}
+
+.pick-choice-selected--blue {
+  --pick-ring-color: #93c5fd;
+  --pick-glow-color: rgba(37, 99, 235, 0.85);
+  --pick-glow-soft: rgba(37, 99, 235, 0.35);
+}
+
+.pick-choice-selected--neutral {
+  --pick-ring-color: #d4d4d8;
+  --pick-glow-color: rgba(161, 161, 170, 0.75);
+  --pick-glow-soft: rgba(161, 161, 170, 0.3);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pick-impact-glove,
   .pick-impact-burst {
@@ -206,5 +251,12 @@ body {
 
   .pick-button-compress {
     animation: none;
+  }
+
+  .pick-choice-selected {
+    animation: none;
+    box-shadow:
+      0 0 0 4px var(--pick-ring-color),
+      0 0 16px var(--pick-glow-color);
   }
 }

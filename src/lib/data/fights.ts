@@ -15,6 +15,7 @@ import type {
   PredictedOutcome,
   SportFilter,
 } from "@/types";
+import { validatePrediction } from "@/lib/rating/validatePrediction";
 import { inferFightTab } from "@/lib/utils";
 
 export type EventCardFilter = "all" | string;
@@ -107,7 +108,6 @@ export async function savePrediction(input: {
   sport: "boxing" | "mma";
   isLocked: boolean;
 }): Promise<{ ok: boolean; error?: string; prediction?: Prediction }> {
-  const { validatePrediction } = await import("@/lib/rating/validatePrediction");
   const validation = validatePrediction({
     predictedOutcome: input.predictedOutcome,
     predictedMethod: input.predictedMethod,

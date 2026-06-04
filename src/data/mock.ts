@@ -17,6 +17,8 @@ const STEEL_CITY_MAIN_LOCK = `${CARD_DATE}T21:00:00.000Z`;
 
 /** 5:00 PM EDT — UFC prelims (Paramount+) */
 const UFC_PRELIMS_LOCK = `${CARD_DATE}T21:00:00.000Z`;
+/** 5:00 PM EDT — UFC prelims start (Paramount+) */
+const UFC_EVENT_START = `${CARD_DATE}T21:00:00.000Z`;
 /** 8:00 PM EDT — UFC main card (Paramount+) */
 const UFC_MAIN_CARD_LOCK = "2026-06-07T00:00:00.000Z";
 
@@ -120,6 +122,7 @@ export const mockEvents: Event[] = [
     name: "Steel City King",
     promotion: "Matchroom Boxing",
     location: "Utilita Arena, Sheffield, UK",
+    timezone: "Europe/London",
     event_date: STEEL_CITY_FIRST_BELL,
     created_at: MOCK_DATA_CREATED,
     updated_at: MOCK_DATA_UPDATED,
@@ -129,7 +132,8 @@ export const mockEvents: Event[] = [
     name: "UFC Fight Night: Muhammad vs. Bonfim",
     promotion: "UFC",
     location: "Meta APEX, Las Vegas, Nevada, USA",
-    event_date: UFC_MAIN_CARD_LOCK,
+    timezone: "America/Los_Angeles",
+    event_date: UFC_EVENT_START,
     created_at: MOCK_DATA_CREATED,
     updated_at: MOCK_DATA_UPDATED,
   },

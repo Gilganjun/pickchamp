@@ -20,6 +20,9 @@ export const metadata: Metadata = {
   title: siteTitle,
   description: siteDescription,
   applicationName: "PickFist",
+  icons: {
+    icon: [{ url: "/icon", type: "image/png" }],
+  },
   openGraph: {
     title: siteTitle,
     description: siteDescription,

@@ -1,10 +1,12 @@
 import { createFight, getAdminData } from "@/app/actions/admin";
 import { AdminFightFields } from "@/components/admin/AdminFightFields";
 import { AdminFormSection } from "@/components/AdminFormSection";
+import { formatPickLockDateTime } from "@/lib/datetime";
 import Link from "next/link";
 
 export default async function AdminFightsPage() {
   const { events, fights } = await getAdminData();
+  const eventById = new Map(events.map((e) => [e.id, e]));
 
   return (
     <div className="min-h-dvh bg-zinc-950 p-6 text-white max-w-2xl">
@@ -103,12 +105,21 @@ export default async function AdminFightsPage() {
       </form>
 
       <ul className="mt-8 space-y-2 text-sm">
-        {fights.map((f) => (
-          <li key={f.id} className="border-b border-zinc-800 py-2">
-            {f.fighter_a_name} vs {f.fighter_b_name} ({f.scheduled_rounds} rds,{" "}
-            {f.sport}) — {f.favourite_side}/{f.favourite_level} — {f.status}
-          </li>
-        ))}
+        {fights.map((f) => {
+          const event = eventById.get(f.event_id);
+          return (
+            <li key={f.id} className="border-b border-zinc-800 py-2">
+              {f.fighter_a_name} vs {f.fighter_b_name} ({f.scheduled_rounds}{" "}
+              rds, {f.sport}) — {f.favourite_side}/{f.favourite_level} —{" "}
+              {f.status}
+              {event ? (
+                <span className="block text-xs text-zinc-500">
+                  Lock: {formatPickLockDateTime(f.lock_time, event)}
+                </span>
+              ) : null}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

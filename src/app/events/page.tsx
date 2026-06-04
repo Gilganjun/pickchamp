@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
-import { getEventsWithMeta } from "@/lib/data/events";
-import { formatFightDate } from "@/lib/utils";
+import { getEventsWithMeta, type EventWithMeta } from "@/lib/data/events";
+import { formatEventDateTime } from "@/lib/datetime";
 
 export default async function EventsPage() {
   const { upcoming, settled } = await getEventsWithMeta();
@@ -37,18 +37,7 @@ export default async function EventsPage() {
   );
 }
 
-function EventCard({
-  event,
-}: {
-  event: {
-    id: string;
-    name: string;
-    promotion: string | null;
-    event_date: string;
-    fightCount: number;
-    sports: string[];
-  };
-}) {
+function EventCard({ event }: { event: EventWithMeta }) {
   return (
     <Link
       href={`/events/${event.id}`}
@@ -56,7 +45,7 @@ function EventCard({
     >
       <p className="font-bold">{event.name}</p>
       <p className="mt-1 text-xs text-zinc-500">
-        {formatFightDate(event.event_date)}
+        {formatEventDateTime(event)}
       </p>
       {event.promotion && (
         <p className="text-xs text-zinc-600">{event.promotion}</p>

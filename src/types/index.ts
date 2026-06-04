@@ -66,6 +66,8 @@ export interface Event {
   name: string;
   promotion: string | null;
   location: string | null;
+  /** IANA timezone for display (e.g. Europe/London). Overrides location inference. */
+  timezone?: string | null;
   event_date: string;
   created_at: string;
   updated_at: string;

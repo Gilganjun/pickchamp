@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+  type ReactNode,
+} from "react";
 import { PickImpactOverlay } from "@/components/picks/PickImpactOverlay";
 import {
   createPickImpactConfig,
@@ -11,9 +17,13 @@ import {
 import { playPickImpactSound } from "@/lib/audio/playPickImpactSound";
 import { savePrediction } from "@/lib/data/fights";
 import { MOCK_USER_ID } from "@/data/mock";
+import { formatPickLine } from "@/lib/profile/display";
+import {
+  formatEventDateTime,
+  formatPickLockDateTime,
+} from "@/lib/datetime";
 import {
   cn,
-  formatFightDate,
   getFighterSurname,
   getLockCountdown,
   isFightLocked,
@@ -30,6 +40,154 @@ interface FightCardProps {
   onSaved?: () => void;
   /** Picks page only — glove impact on fighter pick buttons */
   enablePickImpact?: boolean;
+}
+
+function pickIsDirty(
+  existing: FightWithRelations["userPrediction"],
+  outcome: PredictedOutcome | null,
+  method: PredictedMethod | null,
+  round: number | null
+): boolean {
+  if (!existing || !outcome) return false;
+  return (
+    existing.predicted_outcome !== outcome ||
+    existing.predicted_method !== method ||
+    existing.predicted_round !== round
+  );
+}
+
+function PickChoiceButton({
+  selected,
+  variant,
+  className,
+  impactClass,
+  children,
+  onClick,
+}: {
+  selected: boolean;
+  variant: "red" | "blue" | "neutral";
+  className: string;
+  impactClass?: string;
+  children: ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={cn(
+        className,
+        selected && `pick-choice-selected pick-choice-selected--${variant}`,
+        impactClass
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function PickSubmitPanel({
+  fight,
+  existing,
+  outcome,
+  method,
+  round,
+  pending,
+  onSubmit,
+}: {
+  fight: FightWithRelations;
+  existing: FightWithRelations["userPrediction"];
+  outcome: PredictedOutcome | null;
+  method: PredictedMethod | null;
+  round: number | null;
+  pending: boolean;
+  onSubmit: () => void;
+}) {
+  const savedLine = existing
+    ? formatPickLine(
+        fight,
+        existing.predicted_outcome,
+        existing.predicted_method,
+        existing.predicted_round
+      )
+    : null;
+  const draftLine = outcome
+    ? formatPickLine(fight, outcome, method, round)
+    : null;
+  const dirty = pickIsDirty(existing, outcome, method, round);
+  const hasSaved = Boolean(existing);
+  const showDraft = draftLine && (!hasSaved || dirty);
+
+  return (
+    <div className="mt-4 overflow-hidden rounded-xl border border-[#2a2a2a] bg-[#181818]">
+      <div className="border-b border-[#2a2a2a] px-4 py-3">
+        {hasSaved ? (
+          <>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-green-500">
+              Your current pick
+            </p>
+            <p className="mt-1 text-sm font-bold leading-snug text-white">
+              {savedLine}
+            </p>
+            {dirty && showDraft ? (
+              <p className="mt-2 text-[11px] text-amber-400">
+                <span className="font-semibold uppercase tracking-wide">
+                  Unsaved change →{" "}
+                </span>
+                {draftLine}
+              </p>
+            ) : null}
+          </>
+        ) : showDraft ? (
+          <>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+              Ready to lock
+            </p>
+            <p className="mt-1 text-sm font-bold leading-snug text-white">
+              {draftLine}
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+              Your current pick
+            </p>
+            <p className="mt-1 text-sm text-zinc-500">
+              None yet — select a fighter above
+            </p>
+          </>
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={onSubmit}
+        disabled={pending || !outcome}
+        className="flex w-full flex-col items-center gap-0.5 bg-white px-4 py-3 text-black transition-opacity hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        <span className="text-sm font-bold uppercase tracking-wide">
+          {pending
+            ? "Saving…"
+            : hasSaved
+              ? dirty
+                ? "Save updated pick"
+                : "Update my pick"
+              : "Lock my pick"}
+        </span>
+        {showDraft && !pending ? (
+          <span className="text-[10px] font-medium normal-case text-zinc-600">
+            {dirty ? "Confirm change: " : "Will lock: "}
+            {draftLine}
+          </span>
+        ) : hasSaved && !dirty && !pending ? (
+          <span className="text-[10px] font-medium normal-case text-zinc-600">
+            Tap a fighter above to change, then save
+          </span>
+        ) : null}
+      </button>
+    </div>
+  );
 }
 
 export function FightCard({
@@ -65,6 +223,17 @@ export function FightCard({
       }
     };
   }, []);
+
+  useEffect(() => {
+    setOutcome(existing?.predicted_outcome ?? null);
+    setMethod(existing?.predicted_method ?? null);
+    setRound(existing?.predicted_round ?? null);
+  }, [
+    existing?.predicted_outcome,
+    existing?.predicted_method,
+    existing?.predicted_round,
+    fight.id,
+  ]);
 
   const firePickImpact = (side: PickImpactSide) => {
     if (!enablePickImpact) return;
@@ -132,7 +301,7 @@ export function FightCard({
         </span>
         <div className="text-right">
           <p className="text-[10px] font-medium text-zinc-400">
-            {formatFightDate(fight.lock_time)}
+            {formatEventDateTime(fight.event)}
           </p>
           <p className="text-[10px] text-zinc-500 truncate max-w-[140px]">
             {fight.event.name}
@@ -162,6 +331,9 @@ export function FightCard({
 
       <p className="mt-3 text-center text-xs text-zinc-400">
         🕐 {getLockCountdown(fight.lock_time)}
+        <span className="block text-[10px] text-zinc-500">
+          {formatPickLockDateTime(fight.lock_time, fight.event)}
+        </span>
       </p>
 
       {settled && existing ? (
@@ -194,12 +366,14 @@ export function FightCard({
         <div className="mt-4 rounded-xl border border-[#2a2a2a] bg-[#181818] p-3 text-center">
           <p className="text-sm font-semibold text-zinc-300">Pick Locked</p>
           {existing && (
-            <p className="mt-1 text-xs text-zinc-500">
-              Your pick: {existing.predicted_outcome === "fighterA"
-                ? fight.fighter_a_name
-                : existing.predicted_outcome === "fighterB"
-                  ? fight.fighter_b_name
-                  : "Draw"}
+            <p className="mt-1 text-xs font-semibold text-zinc-300">
+              Your pick:{" "}
+              {formatPickLine(
+                fight,
+                existing.predicted_outcome,
+                existing.predicted_method,
+                existing.predicted_round
+              )}
             </p>
           )}
         </div>
@@ -212,51 +386,58 @@ export function FightCard({
             )}
           >
             <div className="relative overflow-visible">
-              <button
-                type="button"
+              <PickChoiceButton
+                selected={outcome === "fighterA"}
+                variant="red"
                 onClick={() => selectOutcome("fighterA", "left")}
+                impactClass={
+                  impact?.side === "left" ? "pick-button-compress" : undefined
+                }
                 className={cn(
                   "relative z-10 w-full rounded-xl py-3 text-xs font-bold uppercase tracking-wide transition-colors",
                   outcome === "fighterA"
-                    ? "bg-red-600 text-white ring-2 ring-red-400"
-                    : "bg-red-600/90 text-white hover:bg-red-500",
-                  impact?.side === "left" && "pick-button-compress"
+                    ? "bg-red-600 text-white"
+                    : "bg-red-600/90 text-white hover:bg-red-500"
                 )}
               >
                 Pick {getFighterSurname(fight.fighter_a_name)}
-              </button>
+              </PickChoiceButton>
               {impact?.side === "left" && (
                 <PickImpactOverlay config={impact} />
               )}
             </div>
             {fight.sport === "boxing" && (
-              <button
-                type="button"
+              <PickChoiceButton
+                selected={outcome === "draw"}
+                variant="neutral"
                 onClick={() => setOutcome("draw")}
                 className={cn(
-                  "rounded-xl border py-3 text-xs font-bold uppercase tracking-wide",
+                  "w-full rounded-xl border-2 py-3 text-xs font-bold uppercase tracking-wide transition-colors",
                   outcome === "draw"
-                    ? "border-zinc-400 bg-zinc-700 text-white"
+                    ? "border-zinc-300 bg-zinc-600 text-white"
                     : "border-[#2a2a2a] bg-[#181818] text-zinc-400 hover:border-zinc-500"
                 )}
               >
                 Draw
-              </button>
+              </PickChoiceButton>
             )}
             <div className="relative overflow-visible">
-              <button
-                type="button"
+              <PickChoiceButton
+                selected={outcome === "fighterB"}
+                variant="blue"
                 onClick={() => selectOutcome("fighterB", "right")}
+                impactClass={
+                  impact?.side === "right" ? "pick-button-compress" : undefined
+                }
                 className={cn(
                   "relative z-10 w-full rounded-xl py-3 text-xs font-bold uppercase tracking-wide transition-colors",
                   outcome === "fighterB"
-                    ? "bg-blue-600 text-white ring-2 ring-blue-400"
-                    : "bg-blue-600/90 text-white hover:bg-blue-500",
-                  impact?.side === "right" && "pick-button-compress"
+                    ? "bg-blue-600 text-white"
+                    : "bg-blue-600/90 text-white hover:bg-blue-500"
                 )}
               >
                 Pick {getFighterSurname(fight.fighter_b_name)}
-              </button>
+              </PickChoiceButton>
               {impact?.side === "right" && (
                 <PickImpactOverlay config={impact} />
               )}
@@ -280,25 +461,20 @@ export function FightCard({
             </p>
           )}
 
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={pending || !outcome}
-            className="mt-4 w-full rounded-xl bg-white py-3 text-sm font-bold uppercase tracking-wide text-black transition-opacity hover:bg-zinc-200 disabled:opacity-40"
-          >
-            {pending ? "Saving…" : existing ? "Update My Pick" : "Lock My Pick"}
-          </button>
+          <PickSubmitPanel
+            fight={fight}
+            existing={existing}
+            outcome={outcome}
+            method={method}
+            round={round}
+            pending={pending}
+            onSubmit={handleSubmit}
+          />
 
           <p className="mt-2 text-center text-[10px] text-zinc-500">
-            You can change your pick until locks.
+            You can change your pick until lock.
           </p>
         </>
-      )}
-
-      {existing && !locked && !settled && (
-        <p className="mt-2 text-center text-[10px] text-green-500/80">
-          Pick saved — edit anytime before lock
-        </p>
       )}
     </article>
   );

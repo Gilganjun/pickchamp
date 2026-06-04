@@ -14,7 +14,7 @@ import {
   getFightsForPicks,
   groupFightsByEvent,
 } from "@/lib/data/fights";
-import { formatFightDate } from "@/lib/utils";
+import { formatEventDateTime } from "@/lib/datetime";
 import type { Event, FightWithRelations, PickTab, SportFilter as SF } from "@/types";
 
 const tabs: { id: PickTab; label: string }[] = [
@@ -63,7 +63,7 @@ function EventCardSection({
           {event.promotion && <span>{event.promotion} · </span>}
           {event.location ?? "TBA"}
           <span className="mx-1">·</span>
-          {formatFightDate(event.event_date)}
+          {formatEventDateTime(event)}
         </p>
         <p className="mt-1 text-[10px] text-zinc-600">
           {fights.length} fight{fights.length === 1 ? "" : "s"} on this card
@@ -100,12 +100,10 @@ export function PicksClient() {
     load();
   }, [load]);
 
-  const groupedByCard = useMemo(
-    () => (eventCard === "all" ? groupFightsByEvent(fights) : []),
-    [eventCard, fights]
-  );
+  const groupedByCard = useMemo(() => groupFightsByEvent(fights), [fights]);
 
-  const showGrouped = eventCard === "all" && groupedByCard.length > 1;
+  const multiCardView =
+    eventCard === "all" && groupedByCard.length > 1;
 
   return (
     <AppShell prominentBrand showTagline>
@@ -123,7 +121,7 @@ export function PicksClient() {
 
       <div className="mt-3 flex justify-end">
         <span className="text-[10px] text-zinc-600">
-          {showGrouped ? "Grouped by card" : "Sort: Card order"}
+          {multiCardView ? "Grouped by card" : "Sort: Card order"}
         </span>
       </div>
 
@@ -136,7 +134,7 @@ export function PicksClient() {
           <p className="py-12 text-center text-sm text-zinc-500">
             No fights in this view. Try another tab, sport, or event card.
           </p>
-        ) : showGrouped ? (
+        ) : (
           groupedByCard.map(({ event, fights: cardFights }) => (
             <EventCardSection
               key={event.id}
@@ -145,8 +143,6 @@ export function PicksClient() {
               onSaved={load}
             />
           ))
-        ) : (
-          <PicksFightList fights={fights} onSaved={load} />
         )}
       </div>
     </AppShell>

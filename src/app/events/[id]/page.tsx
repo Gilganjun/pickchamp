@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { getEventDetail } from "@/lib/data/events";
-import { formatFightDate } from "@/lib/utils";
+import { formatEventDateTime, formatPickLockDateTime } from "@/lib/datetime";
 
 export default async function EventDetailPage({
   params,
@@ -21,7 +21,7 @@ export default async function EventDetailPage({
         ← Events
       </Link>
       <h1 className="mt-2 text-xl font-black">{event.name}</h1>
-      <p className="text-sm text-zinc-500">{formatFightDate(event.event_date)}</p>
+      <p className="text-sm text-zinc-500">{formatEventDateTime(event)}</p>
       {event.promotion && (
         <p className="text-xs text-zinc-600">{event.promotion}</p>
       )}
@@ -44,7 +44,8 @@ export default async function EventDetailPage({
               {fight.fighter_a_name} vs {fight.fighter_b_name}
             </p>
             <p className="text-xs text-zinc-500">
-              {fight.scheduled_rounds} rounds
+              {fight.scheduled_rounds} rounds · picks lock{" "}
+              {formatPickLockDateTime(fight.lock_time, event)}
             </p>
             <Link
               href="/picks"
