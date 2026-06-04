@@ -9,12 +9,18 @@ import {
   type ReactNode,
 } from "react";
 import {
-  AdvancedRatingNote,
+  CurrentPickSummary,
   PickFistLine,
+  PickRatingSwingCard,
+  RatingPointsGuide,
   RatingSwingButtonFooter,
-  RatingSwingPanel,
+  UpdatePickButton,
 } from "@/components/picks/PickRatingSwing";
-import { getPickFistLine, getPickPotential } from "@/lib/rating/getPickPotential";
+import {
+  getMaxMethodRoundExtra,
+  getPickFistLine,
+  getPickPotential,
+} from "@/lib/rating/getPickPotential";
 import { PickImpactOverlay } from "@/components/picks/PickImpactOverlay";
 import {
   createPickImpactConfig,
@@ -184,111 +190,6 @@ function PickChoiceButton({
   );
 }
 
-function PickSubmitPanel({
-  fight,
-  existing,
-  outcome,
-  method,
-  round,
-  pending,
-  activePotential,
-  onSubmit,
-}: {
-  fight: FightWithRelations;
-  existing: FightWithRelations["userPrediction"];
-  outcome: PredictedOutcome | null;
-  method: PredictedMethod | null;
-  round: number | null;
-  pending: boolean;
-  activePotential: ReturnType<typeof getPickPotential> | null;
-  onSubmit: () => void;
-}) {
-  const savedLine = existing
-    ? formatPickLine(
-        fight,
-        existing.predicted_outcome,
-        existing.predicted_method,
-        existing.predicted_round
-      )
-    : null;
-  const draftLine = outcome
-    ? formatPickLine(fight, outcome, method, round)
-    : null;
-  const dirty = pickIsDirty(existing, outcome, method, round);
-  const hasSaved = Boolean(existing);
-  const showDraft = draftLine && (!hasSaved || dirty);
-
-  return (
-    <div className="mt-4 overflow-hidden rounded-xl border border-[#2a2a2a] bg-[#181818]">
-      <div className="border-b border-[#2a2a2a] px-4 py-3">
-        {hasSaved ? (
-          <>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-green-500">
-              Your current pick
-            </p>
-            <p className="mt-1 text-sm font-bold leading-snug text-white">
-              {savedLine}
-            </p>
-            {dirty && showDraft ? (
-              <p className="mt-2 text-[11px] text-amber-400">
-                <span className="font-semibold uppercase tracking-wide">
-                  Unsaved change →{" "}
-                </span>
-                {draftLine}
-              </p>
-            ) : null}
-          </>
-        ) : showDraft ? (
-          <>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-              Ready to lock
-            </p>
-            <p className="mt-1 text-sm font-bold leading-snug text-white">
-              {draftLine}
-            </p>
-          </>
-        ) : (
-          <>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-              Your current pick
-            </p>
-            <p className="mt-1 text-sm text-zinc-500">
-              None yet — select a fighter above
-            </p>
-          </>
-        )}
-        <RatingSwingPanel potential={activePotential} />
-      </div>
-
-      <button
-        type="button"
-        onClick={onSubmit}
-        disabled={pending || !outcome}
-        className="flex w-full flex-col items-center gap-0.5 bg-white px-4 py-3 text-black transition-opacity hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        <span className="text-sm font-bold uppercase tracking-wide">
-          {pending
-            ? "Saving…"
-            : hasSaved
-              ? dirty
-                ? "Save updated pick"
-                : "Update my pick"
-              : "Lock my pick"}
-        </span>
-        {showDraft && !pending ? (
-          <span className="text-[10px] font-medium normal-case text-zinc-600">
-            {dirty ? "Confirm change: " : "Will lock: "}
-            {draftLine}
-          </span>
-        ) : hasSaved && !dirty && !pending ? (
-          <span className="text-[10px] font-medium normal-case text-zinc-600">
-            Tap a fighter above to change, then save
-          </span>
-        ) : null}
-      </button>
-    </div>
-  );
-}
 
 export function FightCard({
   fight,
@@ -620,38 +521,93 @@ export function FightCard({
             </div>
           </div>
 
-          <AdvancedPredictionPanel
-            sport={fight.sport}
-            scheduledRounds={fight.scheduled_rounds}
+          <div className="mt-4 overflow-hidden rounded-xl border border-[#2a2a2a] bg-[#181818]">
+            <CurrentPickSummary
+              hasSaved={Boolean(existing)}
+              dirty={pickIsDirty(existing, outcome, method, round)}
+              savedLine={
+                existing
+                  ? formatPickLine(
+                      fight,
+                      existing.predicted_outcome,
+                      existing.predicted_method,
+                      existing.predicted_round
+                    )
+                  : null
+              }
+              draftLine={
+                outcome
+                  ? formatPickLine(fight, outcome, method, round)
+                  : null
+              }
+              showDraft={
+                Boolean(
+                  outcome &&
+                    (!existing ||
+                      pickIsDirty(existing, outcome, method, round))
+                )
+              }
+            />
+          </div>
+
+          <PickRatingSwingCard
+            potential={activePotential}
             method={method}
             round={round}
-            onMethodChange={setMethod}
-            onRoundChange={setRound}
-            expanded={advancedOpen}
-            onToggle={() => setAdvancedOpen(!advancedOpen)}
-            ratingNote={
-              advancedOpen && activePotential ? (
-                <AdvancedRatingNote potential={activePotential} />
-              ) : null
-            }
           />
+
+          <div className="mt-3">
+            <AdvancedPredictionPanel
+              sport={fight.sport}
+              scheduledRounds={fight.scheduled_rounds}
+              method={method}
+              round={round}
+              maxBonusExtra={
+                activePotential
+                  ? getMaxMethodRoundExtra(activePotential)
+                  : null
+              }
+              onMethodChange={setMethod}
+              onRoundChange={setRound}
+              expanded={advancedOpen}
+              onToggle={() => setAdvancedOpen(!advancedOpen)}
+            />
+          </div>
+
+          <div className="overflow-hidden rounded-xl border border-[#2a2a2a] bg-[#181818]">
+            <UpdatePickButton
+              pending={pending}
+              disabled={pending || !outcome}
+              hasSaved={Boolean(existing)}
+              dirty={pickIsDirty(existing, outcome, method, round)}
+              showDraft={
+                Boolean(
+                  outcome &&
+                    (!existing ||
+                      pickIsDirty(existing, outcome, method, round))
+                )
+              }
+              draftLine={
+                outcome
+                  ? formatPickLine(fight, outcome, method, round)
+                  : null
+              }
+              onSubmit={handleSubmit}
+            />
+            <div className="p-4 pt-3">
+              <RatingPointsGuide
+                potential={activePotential}
+                method={method}
+                round={round}
+              />
+            </div>
+          </div>
 
           {error && (
             <p className="mt-2 text-xs text-red-400" role="alert">
               {error}
             </p>
           )}
-
-          <PickSubmitPanel
-            fight={fight}
-            existing={existing}
-            outcome={outcome}
-            method={method}
-            round={round}
-            pending={pending}
-            activePotential={activePotential}
-            onSubmit={handleSubmit}
-          />
 
           <p className="mt-2 text-center text-[10px] text-zinc-500">
             You can change your pick until lock.
