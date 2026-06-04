@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  breakPickImpactAudio,
   PICK_IMPACT_SOUND_DELAY_MS,
   PICK_IMPACT_SOUNDS,
   PICK_IMPACT_SOUND_VOLUME,
@@ -19,5 +20,6 @@ describe("playPickImpactSound", () => {
   it("does not throw when window is undefined", () => {
     expect(() => playPickImpactSound()).not.toThrow();
     expect(() => playPickImpactCombo(3, 220)).not.toThrow();
+    expect(() => breakPickImpactAudio()).not.toThrow();
   });
 });

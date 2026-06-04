@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { methodLabel } from "@/lib/profile/display";
 import { formatRatingPoints } from "@/lib/rating/getPickPotential";
 import { cn } from "@/lib/utils";
@@ -17,7 +18,8 @@ interface AdvancedPredictionPanelProps {
   scheduledRounds: number;
   method: PredictedMethod | null;
   round: number | null;
-  maxBonusExtra: number | null;
+  /** Bonus points from current method/round only; omit when nothing selected. */
+  currentBonusExtra: number | null;
   onMethodChange: (m: PredictedMethod | null) => void;
   onRoundChange: (r: number | null) => void;
   expanded: boolean;
@@ -25,12 +27,23 @@ interface AdvancedPredictionPanelProps {
   disabled?: boolean;
 }
 
+function extraPointsLabel(currentBonusExtra: number | null): ReactNode {
+  if (currentBonusExtra != null && currentBonusExtra > 0) {
+    return (
+      <span className="font-bold text-amber-200">
+        {formatRatingPoints(currentBonusExtra)} Extra Points
+      </span>
+    );
+  }
+  return <span className="font-bold text-amber-200">Extra Points</span>;
+}
+
 export function AdvancedPredictionPanel({
   sport,
   scheduledRounds,
   method,
   round,
-  maxBonusExtra,
+  currentBonusExtra,
   onMethodChange,
   onRoundChange,
   expanded,
@@ -73,35 +86,12 @@ export function AdvancedPredictionPanel({
         type="button"
         onClick={onToggle}
         disabled={disabled}
-        className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left transition-colors hover:bg-white/[0.03] disabled:opacity-50"
+        className="relative w-full px-4 py-4 text-center transition-colors hover:bg-white/[0.03] disabled:opacity-50"
         aria-expanded={expanded}
       >
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-amber-400">
-            Bonus rating points
-          </p>
-          <p className="mt-1 text-base font-black uppercase tracking-tight text-white">
-            Add method &amp; round
-          </p>
-          <p className="mt-1 text-[11px] leading-snug text-zinc-400">
-            Optional — predict how they win and when (stoppage) for up to{" "}
-            <span className="font-bold text-amber-200">
-              {maxBonusExtra != null
-                ? formatRatingPoints(maxBonusExtra)
-                : "+17"}{" "}
-              extra
-            </span>{" "}
-            on top of a correct winner.
-          </p>
-          {extrasSummary && !expanded ? (
-            <p className="mt-2 text-xs font-semibold text-amber-200/90">
-              Selected: {extrasSummary}
-            </p>
-          ) : null}
-        </div>
         <span
           className={cn(
-            "shrink-0 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wide",
+            "absolute right-4 top-4 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wide",
             expanded
               ? "bg-amber-500 text-black"
               : "bg-amber-500/20 text-amber-200 ring-1 ring-amber-500/40"
@@ -109,13 +99,28 @@ export function AdvancedPredictionPanel({
         >
           {expanded ? "Close" : "Open"}
         </span>
+
+        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-amber-400">
+          Bonus rating points
+        </p>
+        <p className="mt-1 text-base font-black uppercase tracking-tight text-white sm:text-lg">
+          Add method &amp; round
+        </p>
+        <p className="mx-auto mt-2 max-w-sm text-[11px] leading-snug text-zinc-400">
+          Predict how and when they win for {extraPointsLabel(currentBonusExtra)}
+        </p>
+        {extrasSummary && !expanded ? (
+          <p className="mt-2 text-xs font-semibold text-amber-200/90">
+            Selected: {extrasSummary}
+          </p>
+        ) : null}
       </button>
 
       {expanded && (
         <div className="space-y-4 border-t border-amber-500/20 px-4 pb-4 pt-3">
           <div>
-            <label className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-amber-200/80">
-              How will they win? (optional)
+            <label className="mb-2 block text-center text-[10px] font-bold uppercase tracking-wider text-amber-200/80">
+              How will they win?
             </label>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {methods.map((m) => (
@@ -141,8 +146,8 @@ export function AdvancedPredictionPanel({
 
           {showRound ? (
             <div>
-              <label className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-amber-200/80">
-                Exact round (optional) — 1 to {scheduledRounds}
+              <label className="mb-2 block text-center text-[10px] font-bold uppercase tracking-wider text-amber-200/80">
+                Exact round — 1 to {scheduledRounds}
               </label>
               <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
                 {rounds.map((r) => (
@@ -164,7 +169,7 @@ export function AdvancedPredictionPanel({
               </div>
             </div>
           ) : method ? (
-            <p className="text-[11px] text-zinc-500">
+            <p className="text-center text-[11px] text-zinc-500">
               Pick KO, TKO, submission, or DQ to unlock round prediction.
             </p>
           ) : null}

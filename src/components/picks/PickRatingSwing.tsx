@@ -66,8 +66,7 @@ function winCeilingHint(
   return "Winner only — add method & round below for more";
 }
 
-/** Standalone rating swing for the selected fighter + optional extras. */
-export function PickRatingSwingCard({
+function RatingSwingSummary({
   potential,
   method,
   round,
@@ -78,14 +77,9 @@ export function PickRatingSwingCard({
 }) {
   if (!potential) {
     return (
-      <div className="mt-4 rounded-xl border border-[#2a2a2a] bg-[#181818] px-4 py-4">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-          Rating swing
-        </p>
-        <p className="mt-2 text-center text-xs font-semibold text-zinc-500">
-          Select a fighter above to see how many points you could win or lose
-        </p>
-      </div>
+      <p className="mt-3 text-center text-xs text-zinc-500">
+        Select a fighter above to see rating swing
+      </p>
     );
   }
 
@@ -94,34 +88,25 @@ export function PickRatingSwingCard({
   const hint = winCeilingHint(potential, method, round);
 
   return (
-    <div className="mt-4 rounded-xl border border-[#2a2a2a] bg-[#181818] px-4 py-4">
-      <div className="flex items-baseline justify-between gap-2">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-          Rating swing
-        </p>
-        <p className="text-[10px] font-semibold text-zinc-400">
-          {potential.tierLabel}
-        </p>
-      </div>
-
+    <div className="mt-3 border-t border-[#2a2a2a] pt-3">
       <div
-        className="mt-3 grid grid-cols-2 gap-2"
+        className="grid grid-cols-2 gap-2"
         aria-label={`If correct ${formatRatingPoints(winCeiling)}, if wrong ${formatRatingPoints(potential.wrongRisk)}`}
       >
-        <div className="rounded-xl border-2 border-amber-500/40 bg-gradient-to-b from-amber-500/15 to-[#111111] px-2 py-3 text-center sm:px-3">
+        <div className="rounded-xl border-2 border-amber-500/40 bg-gradient-to-b from-amber-500/15 to-[#111111] px-2 py-2.5 text-center sm:px-3">
           <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-amber-300/90">
             If correct
           </p>
-          <p className="mt-0.5 text-2xl font-black tabular-nums leading-none text-amber-200 sm:text-3xl">
+          <p className="mt-0.5 text-xl font-black tabular-nums leading-none text-amber-200 sm:text-2xl">
             {formatRatingPoints(winCeiling)}
           </p>
           <p className="mt-1 text-[9px] leading-tight text-zinc-500">{hint}</p>
         </div>
-        <div className="rounded-xl border-2 border-red-500/35 bg-gradient-to-b from-red-500/10 to-[#111111] px-2 py-3 text-center sm:px-3">
+        <div className="rounded-xl border-2 border-red-500/35 bg-gradient-to-b from-red-500/10 to-[#111111] px-2 py-2.5 text-center sm:px-3">
           <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-red-300/90">
             If wrong
           </p>
-          <p className="mt-0.5 text-2xl font-black tabular-nums leading-none text-red-300 sm:text-3xl">
+          <p className="mt-0.5 text-xl font-black tabular-nums leading-none text-red-300 sm:text-2xl">
             {formatRatingPoints(potential.wrongRisk)}
           </p>
           <p className="mt-1 text-[9px] leading-tight text-zinc-500">
@@ -130,7 +115,7 @@ export function PickRatingSwingCard({
         </div>
       </div>
 
-      <p className="mt-3 text-center text-[11px] leading-relaxed text-zinc-400">
+      <p className="mt-2.5 text-center text-[11px] leading-relaxed text-zinc-400">
         <span className="font-semibold text-zinc-300">Winner</span>{" "}
         {formatRatingPoints(potential.correctBase)}
         {bonusFromExtras > 0 ? (
@@ -322,6 +307,32 @@ function PickNameSwipe({ name }: { name: string }) {
   );
 }
 
+function PickSectionHeader({
+  label,
+  labelClassName,
+  tierLabel,
+}: {
+  label: string;
+  labelClassName: string;
+  tierLabel?: string;
+}) {
+  return (
+    <div className="flex items-baseline justify-between gap-2">
+      <p
+        className={cn(
+          "text-[10px] font-bold uppercase tracking-wider",
+          labelClassName
+        )}
+      >
+        {label}
+      </p>
+      {tierLabel ? (
+        <p className="text-[10px] font-semibold text-zinc-400">{tierLabel}</p>
+      ) : null}
+    </div>
+  );
+}
+
 export function PickLockSection({
   hasSaved,
   dirty,
@@ -329,6 +340,7 @@ export function PickLockSection({
   pickName,
   method,
   round,
+  potential,
   showDraft,
   pending,
   disabled,
@@ -340,6 +352,7 @@ export function PickLockSection({
   pickName: string | null;
   method: PredictedMethod | null;
   round: number | null;
+  potential: PickPotential | null;
   showDraft: boolean;
   pending: boolean;
   disabled: boolean;
@@ -359,9 +372,11 @@ export function PickLockSection({
     <div className="px-4 py-4">
       {hasSaved ? (
         <>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-green-500">
-            Your current pick
-          </p>
+          <PickSectionHeader
+            label="Your current pick"
+            labelClassName="text-green-500"
+            tierLabel={potential?.tierLabel}
+          />
           {pickName ? (
             <PickNameSwipe name={pickName} />
           ) : (
@@ -380,22 +395,31 @@ export function PickLockSection({
         </>
       ) : showDraft && pickName ? (
         <>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-            Ready to lock
-          </p>
+          <PickSectionHeader
+            label="Ready to lock"
+            labelClassName="text-zinc-500"
+            tierLabel={potential?.tierLabel}
+          />
           <PickNameSwipe name={pickName} />
           <p className="mt-2 text-[11px] text-zinc-400">{methodHint}</p>
         </>
       ) : (
         <>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-            Your current pick
-          </p>
+          <PickSectionHeader
+            label="Your current pick"
+            labelClassName="text-zinc-500"
+          />
           <p className="mt-1 text-sm text-zinc-500">
             None yet — select a fighter above
           </p>
         </>
       )}
+
+      <RatingSwingSummary
+        potential={potential}
+        method={method}
+        round={round}
+      />
 
       {showLockButton ? (
         <button

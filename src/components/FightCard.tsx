@@ -11,14 +11,13 @@ import {
 import {
   PickFistLine,
   PickLockSection,
-  PickRatingSwingCard,
   RatingPointsGuide,
   RatingSwingButtonFooter,
 } from "@/components/picks/PickRatingSwing";
 import {
-  getMaxMethodRoundExtra,
   getPickFistLine,
   getPickPotential,
+  getPotentialWinCeiling,
 } from "@/lib/rating/getPickPotential";
 import { PickImpactOverlay } from "@/components/picks/PickImpactOverlay";
 import {
@@ -253,6 +252,7 @@ export function FightCard({
   const firePickImpact = (side: PickImpactSide) => {
     if (!enablePickImpact) return;
     clearPickImpactTimeouts();
+    setImpact(null);
 
     const hitCount = rollPickImpactComboCount();
     playPickImpactCombo(hitCount, PICK_IMPACT_COMBO_GAP_MS);
@@ -361,20 +361,24 @@ export function FightCard({
         sportBorder
       )}
     >
-      <div className="flex items-start justify-between gap-2">
+      <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2">
         <span
           className={cn(
-            "rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white",
+            "justify-self-start rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white",
             sportColor
           )}
         >
           {fight.sport}
         </span>
-        <div className="text-right">
+        <p className="text-center text-[10px] font-medium leading-snug text-zinc-400">
+          {fight.scheduled_rounds} rds
+          {fight.weight_class ? ` · ${fight.weight_class}` : ""}
+        </p>
+        <div className="justify-self-end text-right">
           <p className="text-[10px] font-medium text-zinc-400">
             {formatEventDateTime(fight.event)}
           </p>
-          <p className="text-[10px] text-zinc-500 truncate max-w-[140px]">
+          <p className="max-w-[140px] truncate text-[10px] text-zinc-500">
             {fight.event.name}
           </p>
         </div>
@@ -387,12 +391,6 @@ export function FightCard({
           accent="red"
           savedOutcome={savedOutcome}
           draftOutcome={draftOutcome}
-          subtitle={
-            <p className="mt-0.5 text-[10px] text-zinc-500">
-              {fight.scheduled_rounds} rds
-              {fight.weight_class ? ` · ${fight.weight_class}` : ""}
-            </p>
-          }
         />
         <span className="rounded-full border border-[#2a2a2a] bg-[#181818] px-2 py-1 text-[10px] font-bold text-zinc-400">
           VS
@@ -558,6 +556,7 @@ export function FightCard({
               pickName={getPickFighterName(fight, outcome)}
               method={method}
               round={round}
+              potential={activePotential}
               showDraft={
                 Boolean(
                   outcome &&
@@ -571,21 +570,16 @@ export function FightCard({
             />
           </div>
 
-          <PickRatingSwingCard
-            potential={activePotential}
-            method={method}
-            round={round}
-          />
-
           <div className="mt-3">
             <AdvancedPredictionPanel
               sport={fight.sport}
               scheduledRounds={fight.scheduled_rounds}
               method={method}
               round={round}
-              maxBonusExtra={
-                activePotential
-                  ? getMaxMethodRoundExtra(activePotential)
+              currentBonusExtra={
+                activePotential && (method || round)
+                  ? getPotentialWinCeiling(activePotential) -
+                    activePotential.correctBase
                   : null
               }
               onMethodChange={setMethod}
