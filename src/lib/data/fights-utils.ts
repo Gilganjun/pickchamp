@@ -32,9 +32,14 @@ export function filterFightsForPicksView(
     });
 }
 
+export type EventFightGroup = {
+  event: Event;
+  fights: FightWithRelations[];
+};
+
 export function groupFightsByEvent(
   fights: FightWithRelations[]
-): { event: Event; fights: FightWithRelations[] }[] {
+): EventFightGroup[] {
   const map = new Map<string, FightWithRelations[]>();
   for (const fight of fights) {
     const list = map.get(fight.event_id) ?? [];
@@ -51,4 +56,17 @@ export function groupFightsByEvent(
         new Date(a.event.event_date).getTime() -
         new Date(b.event.event_date).getTime()
     );
+}
+
+/** Pin the selected card to the top when a specific event is chosen in the filter. */
+export function orderEventCardGroups(
+  groups: EventFightGroup[],
+  selectedCardId: EventCardFilter
+): EventFightGroup[] {
+  if (selectedCardId === "all") return groups;
+  const index = groups.findIndex((group) => group.event.id === selectedCardId);
+  if (index <= 0) return groups;
+  const reordered = [...groups];
+  const [selected] = reordered.splice(index, 1);
+  return [selected, ...reordered];
 }

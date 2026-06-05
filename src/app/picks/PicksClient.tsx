@@ -10,7 +10,10 @@ import {
   type CardFilterValue,
 } from "@/components/picks/PicksFilterBar";
 import { loadPicksPageDataAction } from "@/app/actions/picks";
-import { groupFightsByEvent } from "@/lib/data/fights-utils";
+import {
+  groupFightsByEvent,
+  orderEventCardGroups,
+} from "@/lib/data/fights-utils";
 import { formatEventDateTime } from "@/lib/datetime";
 import { inferFightTab } from "@/lib/utils";
 import type { Event, FightWithRelations, SportFilter as SF } from "@/types";
@@ -71,13 +74,15 @@ function EventCardSection({
   fights,
   onSaved,
   isLoggedIn,
+  defaultExpanded,
 }: {
   event: Event;
   fights: FightWithRelations[];
   onSaved: () => void;
   isLoggedIn: boolean;
+  defaultExpanded: boolean;
 }) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(defaultExpanded);
   const isLiveCard = fights.some(
     (fight) => inferFightTab(fight.status, fight.lock_time) === "live"
   );
@@ -152,7 +157,7 @@ export function PicksClient({
     setLoading(true);
     setError(null);
     try {
-      const data = await loadPicksPageDataAction(sport, eventCard);
+      const data = await loadPicksPageDataAction(sport, "all");
       if (!data.ok) {
         setError(data.error);
         setPickEvents([]);
@@ -163,21 +168,10 @@ export function PicksClient({
       const resolvedCard = resolveCardFilterForSport(eventCard, data.events);
       if (resolvedCard !== eventCard) {
         setEventCard(resolvedCard);
-        const refreshed = await loadPicksPageDataAction(sport, resolvedCard);
-        if (!refreshed.ok) {
-          setError(refreshed.error);
-          setPickEvents([]);
-          setFights([]);
-          return;
-        }
-        setPickEvents(refreshed.events);
-        setFights(refreshed.fights);
-        setIsLoggedIn(refreshed.isLoggedIn);
-      } else {
-        setPickEvents(data.events);
-        setFights(data.fights);
-        setIsLoggedIn(data.isLoggedIn);
       }
+      setPickEvents(data.events);
+      setFights(data.fights);
+      setIsLoggedIn(data.isLoggedIn);
     } catch (loadError) {
       setError(
         loadError instanceof Error
@@ -202,7 +196,10 @@ export function PicksClient({
     setSport(next);
   };
 
-  const groupedByCard = useMemo(() => groupFightsByEvent(fights), [fights]);
+  const groupedByCard = useMemo(
+    () => orderEventCardGroups(groupFightsByEvent(fights), eventCard),
+    [fights, eventCard]
+  );
 
   return (
     <AppShell prominentBrand showTagline showProfileLink>
@@ -233,11 +230,14 @@ export function PicksClient({
         ) : (
           groupedByCard.map(({ event, fights: cardFights }) => (
             <EventCardSection
-              key={event.id}
+              key={`${event.id}-${eventCard}`}
               event={event}
               fights={cardFights}
               onSaved={load}
               isLoggedIn={isLoggedIn}
+              defaultExpanded={
+                eventCard === "all" || event.id === eventCard
+              }
             />
           ))
         )}
