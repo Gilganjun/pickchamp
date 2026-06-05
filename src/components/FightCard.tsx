@@ -29,8 +29,8 @@ import {
   type PickImpactSide,
 } from "@/components/picks/pickImpact";
 import { playPickImpactCombo } from "@/lib/audio/playPickImpactSound";
-import { savePrediction } from "@/lib/data/fights";
-import { MOCK_USER_ID } from "@/data/mock";
+import { savePredictionAction } from "@/app/actions/picks";
+import { useRouter } from "next/navigation";
 import { formatPickLine } from "@/lib/profile/display";
 import {
   formatEventDateTime,
@@ -54,6 +54,7 @@ interface FightCardProps {
   onSaved?: () => void;
   /** Picks page only — glove impact on fighter pick buttons */
   enablePickImpact?: boolean;
+  isLoggedIn?: boolean;
 }
 
 function getPickFighterName(
@@ -205,7 +206,9 @@ export function FightCard({
   fight,
   onSaved,
   enablePickImpact = false,
+  isLoggedIn = true,
 }: FightCardProps) {
+  const router = useRouter();
   const locked = isFightLocked(fight);
   const settled = fight.status === "settled";
   const existing = fight.userPrediction;
@@ -334,10 +337,13 @@ export function FightCard({
       setError("Select a fighter (or draw) first.");
       return;
     }
+    if (!isLoggedIn) {
+      router.push("/login");
+      return;
+    }
     setError(null);
     startTransition(async () => {
-      const res = await savePrediction({
-        userId: MOCK_USER_ID,
+      const res = await savePredictionAction({
         fightId: fight.id,
         predictedOutcome: outcome,
         predictedMethod: method,
@@ -347,6 +353,10 @@ export function FightCard({
         isLocked: locked,
       });
       if (!res.ok) {
+        if (res.error === "LOGIN_REQUIRED") {
+          router.push("/login");
+          return;
+        }
         setError(res.error ?? "Failed to save pick");
         return;
       }

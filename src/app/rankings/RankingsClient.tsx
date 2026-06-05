@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { RankingCard } from "@/components/RankingCard";
 import { TabBar } from "@/components/TabBar";
-import { getLeaderboard } from "@/lib/data/profiles";
+import { loadLeaderboardAction } from "@/app/actions/rankings";
 import type { RankingTab } from "@/types";
 
 const tabs: { id: RankingTab; label: string }[] = [
@@ -16,13 +16,13 @@ const tabs: { id: RankingTab; label: string }[] = [
 export function RankingsClient() {
   const [tab, setTab] = useState<RankingTab>("global");
   const [rows, setRows] = useState<
-    Awaited<ReturnType<typeof getLeaderboard>>
+    Awaited<ReturnType<typeof loadLeaderboardAction>>
   >([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    getLeaderboard(tab).then((data) => {
+    loadLeaderboardAction(tab).then((data) => {
       setRows(data);
       setLoading(false);
     });

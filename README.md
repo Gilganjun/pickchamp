@@ -41,7 +41,9 @@ npm run dev
 
 Use the **exact port** shown in the terminal (e.g. 3002 if 3000 is busy). Hard-refresh the browser (Ctrl+Shift+R).
 
-Without Supabase credentials, the app uses in-memory mock data so you can review the UI immediately.
+Without Supabase credentials, the app uses in-memory mock data so you can review the UI locally.
+
+**Production (`pickfist.com`) requires Supabase env vars** — otherwise picks are not persisted and accounts do not work.
 
 ## Environment variables
 
@@ -49,20 +51,25 @@ Copy `.env.example` to `.env.local`:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `NEXT_PUBLIC_SUPABASE_URL` | No | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | No | Supabase anon key |
-| `SUPABASE_SERVICE_ROLE_KEY` | For admin writes | Service role (server only) |
-| `ADMIN_EMAILS` | No | Comma-separated admin emails (Option B) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Production | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Production | Supabase anon key (public) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Production admin | Service role — **server only**, never client |
+| `ADMIN_EMAILS` | Production admin | Comma-separated emails allowed on `/admin` |
 
-**Admin (MVP):** Option B via `ADMIN_EMAILS`, with Option A `profiles.is_admin` supported in schema. Mock mode allows `/admin` without auth.
-
-## Supabase setup
+## Supabase setup (launch)
 
 1. Create a Supabase project.
-2. Run `supabase/schema.sql` in the SQL Editor.
-3. Optionally run `supabase/seed.sql`.
-4. Add env vars to `.env.local`.
-5. Enable Email auth (or your preferred provider) in Supabase Dashboard.
+2. **SQL Editor → run `supabase/schema.sql`** (full schema + RLS + profile trigger).
+3. **SQL Editor → run `supabase/seed_launch.sql`** (real launch fight cards from the app).
+4. **Authentication → Providers → Email** — enable; for fastest MVP signup, disable “Confirm email”.
+5. **Authentication → URL configuration** — add site URL and redirect URLs:
+   - `https://pickfist.com`
+   - `https://pickfist.com/auth/callback`
+   - `http://localhost:3000/auth/callback` (local dev)
+6. Add env vars to `.env.local` and **Vercel** (then redeploy).
+7. Set `ADMIN_EMAILS` to your admin email(s).
+
+**Do not run** `supabase/migrations/20260603_favourite_rating_v2.sql` on a blank database — those columns are already in `schema.sql`.
 
 ## Mock data
 
@@ -114,9 +121,11 @@ Grading uses `src/lib/grading/gradeFight.ts` and never duplicates rating math in
 | `/rankings` | Leaderboards |
 | `/events` | Event list |
 | `/events/[id]` | Event detail |
-| `/profile` | Current user |
+| `/login` | Log in |
+| `/signup` | Create account |
+| `/profile` | Current user (requires login when Supabase connected) |
 | `/profile/[username]` | Public profile |
-| `/admin` | Admin hub |
+| `/admin` | Admin hub (protected when Supabase connected) |
 
 ## Scheduled rounds
 

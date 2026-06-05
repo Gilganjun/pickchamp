@@ -6,6 +6,7 @@ import {
 } from "@/data/mock";
 import { hasSupabaseConfig } from "@/lib/config";
 import { getMockEvents } from "@/data/mock";
+import { mapPrediction } from "@/lib/supabase/mappers";
 import type {
   Event,
   FightWithRelations,
@@ -15,37 +16,24 @@ import type {
   SportFilter,
 } from "@/types";
 import { validatePrediction } from "@/lib/rating/validatePrediction";
-import { inferFightTab } from "@/lib/utils";
+import {
+  filterFightsForPicksView,
+  type EventCardFilter,
+} from "@/lib/data/fights-utils";
 
-export type EventCardFilter = "all" | string;
+export type { EventCardFilter };
+export { groupFightsByEvent, isActivePicksFight } from "@/lib/data/fights-utils";
 
-/** Upcoming + in-progress fights shown on the Picks page (settled excluded). */
-export function isActivePicksFight(fight: FightWithRelations): boolean {
-  const tab = inferFightTab(fight.status, fight.lock_time);
-  return tab === "upcoming" || tab === "live";
-}
-
-function filterFightsForPicksView(
-  fights: FightWithRelations[],
-  sportFilter: SportFilter,
-  eventFilter: EventCardFilter
-): FightWithRelations[] {
-  return fights
-    .filter(isActivePicksFight)
-    .filter((f) => sportFilter === "all" || f.sport === sportFilter)
-    .filter((f) => eventFilter === "all" || f.event_id === eventFilter)
-    .sort((a, b) => {
-      const eventDiff =
-        new Date(a.event.event_date).getTime() -
-        new Date(b.event.event_date).getTime();
-      if (eventDiff !== 0) return eventDiff;
-      const orderA = a.fight_order ?? 999;
-      const orderB = b.fight_order ?? 999;
-      if (orderA !== orderB) return orderA - orderB;
-      return (
-        new Date(a.lock_time).getTime() - new Date(b.lock_time).getTime()
-      );
-    });
+async function getAllFightRelations(
+  userId?: string
+): Promise<FightWithRelations[]> {
+  if (hasSupabaseConfig()) {
+    const { fetchFightWithRelations } = await import(
+      "@/lib/data/supabase-fetch"
+    );
+    return fetchFightWithRelations(userId);
+  }
+  return getMockFightWithRelations(userId ?? MOCK_USER_ID);
 }
 
 export async function getFightsForPicks(
@@ -53,14 +41,7 @@ export async function getFightsForPicks(
   userId?: string,
   eventFilter: EventCardFilter = "all"
 ): Promise<FightWithRelations[]> {
-  const effectiveUserId = userId ?? MOCK_USER_ID;
-  let fights = getMockFightWithRelations(effectiveUserId);
-
-  if (hasSupabaseConfig()) {
-    // Supabase integration placeholder — falls back to mock until wired
-    fights = getMockFightWithRelations(effectiveUserId);
-  }
-
+  const fights = await getAllFightRelations(userId);
   return filterFightsForPicksView(fights, sportFilter, eventFilter);
 }
 
@@ -71,32 +52,23 @@ export async function getEventsForPicks(
 ): Promise<Event[]> {
   const fights = await getFightsForPicks(sportFilter, userId, "all");
   const eventIds = [...new Set(fights.map((f) => f.event_id))];
+
+  if (hasSupabaseConfig()) {
+    const { fetchAllEvents } = await import("@/lib/data/supabase-fetch");
+    const allEvents = await fetchAllEvents();
+    return allEvents
+      .filter((e) => eventIds.includes(e.id))
+      .sort(
+        (a, b) =>
+          new Date(a.event_date).getTime() - new Date(b.event_date).getTime()
+      );
+  }
+
   return getMockEvents()
     .filter((e) => eventIds.includes(e.id))
     .sort(
       (a, b) =>
         new Date(a.event_date).getTime() - new Date(b.event_date).getTime()
-    );
-}
-
-export function groupFightsByEvent(
-  fights: FightWithRelations[]
-): { event: Event; fights: FightWithRelations[] }[] {
-  const map = new Map<string, FightWithRelations[]>();
-  for (const fight of fights) {
-    const list = map.get(fight.event_id) ?? [];
-    list.push(fight);
-    map.set(fight.event_id, list);
-  }
-  return [...map.entries()]
-    .map(([, cardFights]) => ({
-      event: cardFights[0].event,
-      fights: cardFights,
-    }))
-    .sort(
-      (a, b) =>
-        new Date(a.event.event_date).getTime() -
-        new Date(b.event.event_date).getTime()
     );
 }
 
@@ -124,6 +96,52 @@ export async function savePrediction(input: {
     return { ok: false, error: validation.errors.join(" ") };
   }
 
+  if (hasSupabaseConfig()) {
+    const { createClient } = await import("@/lib/supabase/server");
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user || user.id !== input.userId) {
+      return { ok: false, error: "LOGIN_REQUIRED" };
+    }
+
+    const { data: existing } = await supabase
+      .from("predictions")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("fight_id", input.fightId)
+      .maybeSingle();
+
+    if (existing?.locked_at) {
+      return { ok: false, error: "This pick is locked and cannot be changed." };
+    }
+
+    const nowIso = new Date().toISOString();
+    const row = {
+      user_id: user.id,
+      fight_id: input.fightId,
+      predicted_outcome: input.predictedOutcome,
+      predicted_method: input.predictedMethod,
+      predicted_round: input.predictedRound,
+      updated_at: nowIso,
+      ...(existing ? {} : { created_at: nowIso }),
+    };
+
+    const { data, error } = await supabase
+      .from("predictions")
+      .upsert(row, { onConflict: "user_id,fight_id" })
+      .select("*")
+      .single();
+
+    if (error) {
+      return { ok: false, error: error.message };
+    }
+
+    return { ok: true, prediction: mapPrediction(data) };
+  }
+
   const pred = upsertMockPrediction({
     user_id: input.userId,
     fight_id: input.fightId,
@@ -145,7 +163,10 @@ export async function savePrediction(input: {
 
 export async function getUserPredictions(userId: string): Promise<Prediction[]> {
   if (hasSupabaseConfig()) {
-    return getMockPredictions(userId);
+    const { fetchPredictionsForUser } = await import(
+      "@/lib/data/supabase-fetch"
+    );
+    return fetchPredictionsForUser(userId);
   }
   return getMockPredictions(userId);
 }

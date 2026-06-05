@@ -11,6 +11,8 @@ import {
   mockResults,
   mockPredictions,
 } from "@/data/mock";
+import { requireAdminUser } from "@/lib/auth/admin";
+import { hasSupabaseConfig } from "@/lib/config";
 import {
   applyRatingToProfile,
   gradePredictionsForFight,
@@ -20,13 +22,31 @@ import {
   parseFavouriteSideFromForm,
   validateFavouriteFields,
 } from "@/lib/rating/validateFavouriteFields";
+import { createAdminClient, hasSupabaseAdminConfig } from "@/lib/supabase/admin";
+import { mapFight, mapPrediction, mapProfile } from "@/lib/supabase/mappers";
+import {
+  fetchAllEvents,
+  fetchAllFights,
+  fetchAllProfiles,
+} from "@/lib/data/supabase-fetch";
 import type { Event, Fight, FightResult, ResultMethod, ResultOutcome } from "@/types";
 
-// MVP admin: no auth gate in mock mode. Production uses is_admin + ADMIN_EMAILS.
-const MOCK_ADMIN_ENABLED = true;
+async function assertAdminAccess() {
+  const gate = await requireAdminUser();
+  if (!hasSupabaseConfig()) {
+    return gate;
+  }
+  if (!gate.ok) {
+    throw new Error(
+      gate.reason === "unauthenticated" ? "LOGIN_REQUIRED" : "UNAUTHORIZED"
+    );
+  }
+  return gate;
+}
 
 export async function createEvent(formData: FormData): Promise<void> {
-  if (!MOCK_ADMIN_ENABLED) return;
+  await assertAdminAccess();
+
   const event: Event = {
     id: `evt-${Date.now()}`,
     name: String(formData.get("name") ?? ""),
@@ -37,11 +57,26 @@ export async function createEvent(formData: FormData): Promise<void> {
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
+
+  if (hasSupabaseAdminConfig()) {
+    const admin = createAdminClient();
+    const { error } = await admin.from("events").insert({
+      name: event.name,
+      promotion: event.promotion,
+      location: event.location,
+      timezone: event.timezone,
+      event_date: event.event_date,
+    });
+    if (error) throw new Error(error.message);
+    return;
+  }
+
   mockEvents.push(event);
 }
 
 export async function createFight(formData: FormData): Promise<void> {
-  if (!MOCK_ADMIN_ENABLED) return;
+  await assertAdminAccess();
+
   const scheduledRounds = parseInt(String(formData.get("scheduled_rounds")), 10);
   if (!scheduledRounds || scheduledRounds < 1) {
     return;
@@ -76,11 +111,31 @@ export async function createFight(formData: FormData): Promise<void> {
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
+
+  if (hasSupabaseAdminConfig()) {
+    const admin = createAdminClient();
+    const { error } = await admin.from("fights").insert({
+      event_id: fight.event_id,
+      sport: fight.sport,
+      fighter_a_name: fight.fighter_a_name,
+      fighter_b_name: fight.fighter_b_name,
+      scheduled_rounds: fight.scheduled_rounds,
+      weight_class: fight.weight_class,
+      fight_order: fight.fight_order,
+      lock_time: fight.lock_time,
+      status: fight.status,
+      favourite_side: fight.favourite_side,
+      favourite_level: fight.favourite_level,
+    });
+    if (error) throw new Error(error.message);
+    return;
+  }
+
   mockFights.push(fight);
 }
 
 export async function settleFight(formData: FormData) {
-  if (!MOCK_ADMIN_ENABLED) return { ok: false, error: "Unauthorized" };
+  await assertAdminAccess();
 
   const fightId = String(formData.get("fight_id"));
   const outcome = String(formData.get("outcome")) as ResultOutcome;
@@ -89,6 +144,158 @@ export async function settleFight(formData: FormData) {
   const resultRound = resultRoundRaw
     ? parseInt(String(resultRoundRaw), 10)
     : null;
+
+  if (hasSupabaseAdminConfig()) {
+    const admin = createAdminClient();
+    const { data: fightRow, error: fightError } = await admin
+      .from("fights")
+      .select("*")
+      .eq("id", fightId)
+      .single();
+    if (fightError || !fightRow) {
+      return { ok: false, error: "Fight not found" };
+    }
+    const fight = mapFight(fightRow);
+
+    if (
+      resultRound != null &&
+      (resultRound < 1 || resultRound > fight.scheduled_rounds)
+    ) {
+      return {
+        ok: false,
+        error: `resultRound must be between 1 and ${fight.scheduled_rounds}`,
+      };
+    }
+
+    const result: FightResult = {
+      id: `res-${Date.now()}`,
+      fight_id: fightId,
+      outcome,
+      method,
+      result_round: resultRound,
+      official_notes: (formData.get("official_notes") as string) || null,
+      settled_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error: resultError } = await admin.from("fight_results").upsert(
+      {
+        fight_id: fightId,
+        outcome: result.outcome,
+        method: result.method,
+        result_round: result.result_round,
+        official_notes: result.official_notes,
+        settled_at: result.settled_at,
+        updated_at: result.updated_at,
+      },
+      { onConflict: "fight_id" }
+    );
+    if (resultError) return { ok: false, error: resultError.message };
+
+    const newStatus =
+      outcome === "cancelled" || outcome === "no_contest"
+        ? outcome
+        : "settled";
+
+    await admin
+      .from("fights")
+      .update({ status: newStatus, updated_at: new Date().toISOString() })
+      .eq("id", fightId);
+
+    const { data: predRows } = await admin
+      .from("predictions")
+      .select("*")
+      .eq("fight_id", fightId);
+
+    const predictions = (predRows ?? []).map((row) => mapPrediction(row));
+    const { graded, summary } = gradePredictionsForFight(
+      { ...fight, status: newStatus },
+      result,
+      predictions
+    );
+
+    for (const g of graded) {
+      await admin
+        .from("predictions")
+        .update({
+          graded_at: g.graded_at,
+          rating_change: g.rating_change,
+          main_correct: g.main_correct,
+          method_correct: g.method_correct,
+          round_correct: g.round_correct,
+          perfect_pick: g.perfect_pick,
+          grading_details: g.gradingDetails,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", g.id);
+
+      if (g.rating_change != null) {
+        const { data: profileRow } = await admin
+          .from("profiles")
+          .select("*")
+          .eq("id", g.user_id)
+          .single();
+        if (profileRow) {
+          const before = mapProfile(profileRow);
+          const updatedProfile = applyRatingToProfile(
+            before,
+            fight.sport,
+            g.rating_change,
+            g.main_correct ?? false,
+            g.perfect_pick ?? false
+          );
+          await admin
+            .from("profiles")
+            .update({
+              global_rating: updatedProfile.global_rating,
+              boxing_rating: updatedProfile.boxing_rating,
+              mma_rating: updatedProfile.mma_rating,
+              total_picks: updatedProfile.total_picks,
+              total_correct: updatedProfile.total_correct,
+              boxing_picks: updatedProfile.boxing_picks,
+              boxing_correct: updatedProfile.boxing_correct,
+              mma_picks: updatedProfile.mma_picks,
+              mma_correct: updatedProfile.mma_correct,
+              perfect_picks: updatedProfile.perfect_picks,
+              current_streak: updatedProfile.current_streak,
+              best_streak: updatedProfile.best_streak,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", g.user_id);
+
+          await admin.from("rating_history").insert({
+            user_id: g.user_id,
+            fight_id: fightId,
+            sport: fight.sport,
+            old_global_rating: before.global_rating,
+            new_global_rating: updatedProfile.global_rating,
+            old_sport_rating:
+              fight.sport === "boxing"
+                ? before.boxing_rating
+                : before.mma_rating,
+            new_sport_rating:
+              fight.sport === "boxing"
+                ? updatedProfile.boxing_rating
+                : updatedProfile.mma_rating,
+            rating_change: g.rating_change,
+            reason: g.gradingDetails,
+          });
+        }
+      }
+    }
+
+    await admin.from("grading_runs").insert({
+      fight_id: fightId,
+      total_predictions: summary.totalPredictions,
+      fighter_a_pick_count: summary.fighterAPickCount,
+      fighter_b_pick_count: summary.fighterBPickCount,
+      draw_pick_count: summary.drawPickCount,
+      result_summary: summary,
+    });
+
+    return { ok: true, summary };
+  }
 
   const fight = mockFights.find((f) => f.id === fightId);
   if (!fight) return { ok: false, error: "Fight not found" };
@@ -156,6 +363,27 @@ export async function settleFight(formData: FormData) {
 }
 
 export async function getAdminData() {
+  await assertAdminAccess();
+
+  if (hasSupabaseConfig()) {
+    const [events, fights, profiles] = await Promise.all([
+      fetchAllEvents(),
+      fetchAllFights(),
+      fetchAllProfiles(),
+    ]);
+    const admin = hasSupabaseAdminConfig() ? createAdminClient() : null;
+    const { data: predictions } = admin
+      ? await admin.from("predictions").select("*")
+      : { data: [] };
+
+    return {
+      events,
+      fights,
+      predictions: (predictions ?? []).map((row) => mapPrediction(row)),
+      profiles,
+    };
+  }
+
   return {
     events: getMockEvents(),
     fights: getMockFights(),

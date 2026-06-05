@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { ProfilePageContent } from "@/components/profile/ProfilePageContent";
 import { getMockFightWithRelations } from "@/data/mock";
+import { hasSupabaseConfig } from "@/lib/config";
 import { getUserPredictions } from "@/lib/data/fights";
+import { fetchFightWithRelations } from "@/lib/data/supabase-fetch";
 import {
   getProfileByUsername,
   getProfileRanks,
@@ -19,7 +21,9 @@ export default async function PublicProfilePage({
 
   const ranks = await getProfileRanks(profile);
   const predictions = await getUserPredictions(profile.id);
-  const fights = getMockFightWithRelations(profile.id);
+  const fights = hasSupabaseConfig()
+    ? await fetchFightWithRelations(profile.id)
+    : getMockFightWithRelations(profile.id);
 
   return (
     <AppShell showBrand={false} showTagline={false}>

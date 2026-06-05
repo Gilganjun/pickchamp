@@ -4,6 +4,11 @@ import {
   getMockFights,
 } from "@/data/mock";
 import { hasSupabaseConfig } from "@/lib/config";
+import {
+  fetchAllEvents,
+  fetchAllFights,
+  fetchFightWithRelations,
+} from "@/lib/data/supabase-fetch";
 import type { Event, FightWithRelations } from "@/types";
 
 export interface EventWithMeta extends Event {
@@ -12,19 +17,18 @@ export interface EventWithMeta extends Event {
   isSettled: boolean;
 }
 
-export async function getEventsWithMeta(): Promise<{
-  upcoming: EventWithMeta[];
-  settled: EventWithMeta[];
-}> {
-  const events = getMockEvents();
-  const fights = getMockFights();
-
+function buildEventsWithMeta(
+  events: Event[],
+  fights: { event_id: string; sport: string; status: string }[]
+): { upcoming: EventWithMeta[]; settled: EventWithMeta[] } {
   const withMeta: EventWithMeta[] = events.map((event) => {
     const eventFights = fights.filter((f) => f.event_id === event.id);
     const sports = [...new Set(eventFights.map((f) => f.sport))];
     const isSettled =
       eventFights.length > 0 &&
-      eventFights.every((f) => f.status === "settled" || f.status === "cancelled");
+      eventFights.every(
+        (f) => f.status === "settled" || f.status === "cancelled"
+      );
     return {
       ...event,
       fightCount: eventFights.length,
@@ -33,19 +37,42 @@ export async function getEventsWithMeta(): Promise<{
     };
   });
 
-  if (hasSupabaseConfig()) {
-    // placeholder
-  }
-
   return {
     upcoming: withMeta.filter((e) => !e.isSettled),
     settled: withMeta.filter((e) => e.isSettled),
   };
 }
 
+export async function getEventsWithMeta(): Promise<{
+  upcoming: EventWithMeta[];
+  settled: EventWithMeta[];
+}> {
+  if (hasSupabaseConfig()) {
+    const [events, fights] = await Promise.all([
+      fetchAllEvents(),
+      fetchAllFights(),
+    ]);
+    return buildEventsWithMeta(events, fights);
+  }
+
+  const events = getMockEvents();
+  const fights = getMockFights();
+  return buildEventsWithMeta(events, fights);
+}
+
 export async function getEventDetail(
   eventId: string
 ): Promise<{ event: Event; fights: FightWithRelations[] } | null> {
+  if (hasSupabaseConfig()) {
+    const events = await fetchAllEvents();
+    const event = events.find((e) => e.id === eventId);
+    if (!event) return null;
+    const fights = (await fetchFightWithRelations()).filter(
+      (f) => f.event_id === eventId
+    );
+    return { event, fights };
+  }
+
   const events = getMockEvents();
   const event = events.find((e) => e.id === eventId);
   if (!event) return null;

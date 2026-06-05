@@ -9,11 +9,8 @@ import {
   resolveCardFilterForSport,
   type CardFilterValue,
 } from "@/components/picks/PicksFilterBar";
-import {
-  getEventsForPicks,
-  getFightsForPicks,
-  groupFightsByEvent,
-} from "@/lib/data/fights";
+import { loadPicksPageDataAction } from "@/app/actions/picks";
+import { groupFightsByEvent } from "@/lib/data/fights-utils";
 import { formatEventDateTime } from "@/lib/datetime";
 import { inferFightTab } from "@/lib/utils";
 import type { Event, FightWithRelations, SportFilter as SF } from "@/types";
@@ -21,9 +18,11 @@ import type { Event, FightWithRelations, SportFilter as SF } from "@/types";
 function PicksFightList({
   fights,
   onSaved,
+  isLoggedIn,
 }: {
   fights: FightWithRelations[];
   onSaved: () => void;
+  isLoggedIn: boolean;
 }) {
   return (
     <>
@@ -33,6 +32,7 @@ function PicksFightList({
           fight={fight}
           onSaved={onSaved}
           enablePickImpact
+          isLoggedIn={isLoggedIn}
         />
       ))}
     </>
@@ -70,10 +70,12 @@ function EventCardSection({
   event,
   fights,
   onSaved,
+  isLoggedIn,
 }: {
   event: Event;
   fights: FightWithRelations[];
   onSaved: () => void;
+  isLoggedIn: boolean;
 }) {
   const [expanded, setExpanded] = useState(true);
   const isLiveCard = fights.some(
@@ -114,30 +116,46 @@ function EventCardSection({
 
       {expanded ? (
         <div className="space-y-3 border-t border-[#2a2a2a] px-3 pb-3 pt-3">
-          <PicksFightList fights={fights} onSaved={onSaved} />
+          <PicksFightList
+            fights={fights}
+            onSaved={onSaved}
+            isLoggedIn={isLoggedIn}
+          />
         </div>
       ) : null}
     </section>
   );
 }
 
-export function PicksClient() {
+interface PicksClientProps {
+  initialIsLoggedIn?: boolean;
+}
+
+export function PicksClient({
+  initialIsLoggedIn = false,
+}: PicksClientProps) {
   const [sport, setSport] = useState<SF>("all");
   const [eventCard, setEventCard] = useState<CardFilterValue>("all");
   const [pickEvents, setPickEvents] = useState<Event[]>([]);
   const [fights, setFights] = useState<FightWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(initialIsLoggedIn);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const events = await getEventsForPicks(sport);
-    setPickEvents(events);
-    const resolvedCard = resolveCardFilterForSport(eventCard, events);
+    const data = await loadPicksPageDataAction(sport, eventCard);
+    const resolvedCard = resolveCardFilterForSport(eventCard, data.events);
     if (resolvedCard !== eventCard) {
       setEventCard(resolvedCard);
+      const refreshed = await loadPicksPageDataAction(sport, resolvedCard);
+      setPickEvents(refreshed.events);
+      setFights(refreshed.fights);
+      setIsLoggedIn(refreshed.isLoggedIn);
+    } else {
+      setPickEvents(data.events);
+      setFights(data.fights);
+      setIsLoggedIn(data.isLoggedIn);
     }
-    const data = await getFightsForPicks(sport, undefined, resolvedCard);
-    setFights(data);
     setLoading(false);
   }, [sport, eventCard]);
 
@@ -179,6 +197,7 @@ export function PicksClient() {
               event={event}
               fights={cardFights}
               onSaved={load}
+              isLoggedIn={isLoggedIn}
             />
           ))
         )}

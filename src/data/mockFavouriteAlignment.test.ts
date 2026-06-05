@@ -34,6 +34,15 @@ const MARKET_ALIGNED: Record<
   "fight-018": { favourite_side: "fighterB", favourite_level: "favourite" }, // Brito -190
   "fight-019": { favourite_side: "fighterA", favourite_level: "favourite" }, // Chaves -370
   "fight-020": { favourite_side: "fighterA", favourite_level: "favourite" }, // Souza -300
+  // Zuffa Boxing 7 — Bet365 / OddsChecker main; BoxRec rank proxy on undercard
+  "fight-021": { favourite_side: "fighterA", favourite_level: "favourite" }, // CBS -330
+  "fight-022": { favourite_side: "fighterA", favourite_level: "favourite" }, // Massey #21 vs Clarke #24
+  "fight-023": { favourite_side: "none", favourite_level: "even" }, // both unranked
+  "fight-024": { favourite_side: "fighterB", favourite_level: "favourite" }, // Streeter #365; McKenna unranked
+  "fight-025": { favourite_side: "fighterA", favourite_level: "favourite" }, // Hickey #318 vs Tompkins #614
+  "fight-026": { favourite_side: "fighterB", favourite_level: "heavy_favourite" }, // Dychko #69 vs Dykes #261
+  "fight-027": { favourite_side: "fighterB", favourite_level: "favourite" }, // Vergiev #418 vs Hughes #516
+  "fight-028": { favourite_side: "fighterA", favourite_level: "favourite" }, // Macmillan #814 vs Fanthome #1529
 };
 
 describe("mock favourite alignment with market odds sheets", () => {

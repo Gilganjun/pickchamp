@@ -1,6 +1,11 @@
 import { getMockProfiles, MOCK_USER_ID } from "@/data/mock";
 import { hasSupabaseConfig } from "@/lib/config";
 import {
+  fetchAllProfiles,
+  fetchProfileById,
+  fetchProfileByUsername,
+} from "@/lib/data/supabase-fetch";
+import {
   assignOfficialRanks,
   getRankDisplay,
   sortLeaderboard,
@@ -9,7 +14,7 @@ import type { Profile, RankingTab } from "@/types";
 
 export async function getAllProfiles(): Promise<Profile[]> {
   if (hasSupabaseConfig()) {
-    return getMockProfiles();
+    return fetchAllProfiles();
   }
   return getMockProfiles();
 }
@@ -17,6 +22,9 @@ export async function getAllProfiles(): Promise<Profile[]> {
 export async function getProfileByUsername(
   username: string
 ): Promise<Profile | null> {
+  if (hasSupabaseConfig()) {
+    return fetchProfileByUsername(username);
+  }
   const profiles = await getAllProfiles();
   return profiles.find((p) => p.username === username) ?? null;
 }
@@ -25,6 +33,10 @@ export async function getCurrentUserProfile(
   userId?: string
 ): Promise<Profile | null> {
   const id = userId ?? MOCK_USER_ID;
+  if (hasSupabaseConfig()) {
+    if (!userId) return null;
+    return fetchProfileById(userId);
+  }
   const profiles = await getAllProfiles();
   return profiles.find((p) => p.id === id) ?? null;
 }

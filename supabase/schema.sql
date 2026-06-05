@@ -32,6 +32,7 @@ create table if not exists public.events (
   name text not null,
   promotion text,
   location text,
+  timezone text,
   event_date timestamptz not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -180,6 +181,9 @@ alter table public.grading_runs enable row level security;
 
 create policy "Profiles are viewable by everyone"
   on public.profiles for select using (true);
+
+create policy "Users can insert own profile"
+  on public.profiles for insert with check (auth.uid() = id);
 
 create policy "Users can update own profile"
   on public.profiles for update using (auth.uid() = id);
