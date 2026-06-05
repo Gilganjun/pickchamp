@@ -26,7 +26,11 @@ export default async function PicksPage() {
     );
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Failed to load fights.";
+      error instanceof Error
+        ? error.message
+        : typeof error === "object" && error && "message" in error
+          ? String((error as { message: unknown }).message)
+          : "Failed to load fights.";
     return (
       <PicksClient
         initialIsLoggedIn={isLoggedIn}

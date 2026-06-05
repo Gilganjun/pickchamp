@@ -16,10 +16,14 @@ import type {
   Profile,
 } from "@/types";
 
+function throwQueryError(table: string, error: { message: string }) {
+  throw new Error(`Supabase ${table} query failed: ${error.message}`);
+}
+
 export async function fetchAllProfiles(): Promise<Profile[]> {
   const supabase = await createClient();
   const { data, error } = await supabase.from("profiles").select("*");
-  if (error) throw error;
+  if (error) throwQueryError("profiles", error);
   return (data ?? []).map((row) => mapProfile(row));
 }
 
@@ -30,7 +34,7 @@ export async function fetchProfileById(id: string): Promise<Profile | null> {
     .select("*")
     .eq("id", id)
     .maybeSingle();
-  if (error) throw error;
+  if (error) throwQueryError("profiles", error);
   return data ? mapProfile(data) : null;
 }
 
@@ -43,28 +47,28 @@ export async function fetchProfileByUsername(
     .select("*")
     .eq("username", username.toLowerCase())
     .maybeSingle();
-  if (error) throw error;
+  if (error) throwQueryError("profiles", error);
   return data ? mapProfile(data) : null;
 }
 
 export async function fetchAllEvents(): Promise<Event[]> {
   const supabase = await createClient();
   const { data, error } = await supabase.from("events").select("*");
-  if (error) throw error;
+  if (error) throwQueryError("events", error);
   return (data ?? []).map((row) => mapEvent(row));
 }
 
 export async function fetchAllFights(): Promise<Fight[]> {
   const supabase = await createClient();
   const { data, error } = await supabase.from("fights").select("*");
-  if (error) throw error;
+  if (error) throwQueryError("fights", error);
   return (data ?? []).map((row) => mapFight(row));
 }
 
 export async function fetchAllFightResults(): Promise<FightResult[]> {
   const supabase = await createClient();
   const { data, error } = await supabase.from("fight_results").select("*");
-  if (error) throw error;
+  if (error) throwQueryError("fight_results", error);
   return (data ?? []).map((row) => mapFightResult(row));
 }
 
@@ -76,7 +80,7 @@ export async function fetchPredictionsForUser(
     .from("predictions")
     .select("*")
     .eq("user_id", userId);
-  if (error) throw error;
+  if (error) throwQueryError("predictions", error);
   return (data ?? []).map((row) => mapPrediction(row));
 }
 
