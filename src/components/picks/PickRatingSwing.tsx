@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import {
   formatRatingPoints,
   formatRatingSwingShort,
   getPotentialWinCeiling,
   getRatingScenarios,
   type PickPotential,
+  type RatingScenario,
 } from "@/lib/rating/getPickPotential";
 import { methodLabel } from "@/lib/profile/display";
 import type { PredictedMethod } from "@/types";
@@ -160,13 +162,145 @@ export function RatingSwingButtonFooter({
 }
 
 function activeScenarioId(
-  potential: PickPotential,
   method: PredictedMethod | null,
   round: number | null
-): string | null {
+): string {
   if (method && round) return "perfect";
   if (method) return "winner-method-right";
   return "winner-only";
+}
+
+function PointsGuideChevron({ expanded }: { expanded: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={cn(
+        "h-4 w-4 shrink-0 text-amber-300/90 transition-transform duration-200",
+        expanded ? "rotate-180" : "rotate-0"
+      )}
+      aria-hidden
+    >
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}
+
+function PointsGuideHeading({
+  expanded,
+  onToggle,
+}: {
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={expanded}
+      aria-label={
+        expanded
+          ? "Hide all point outcomes"
+          : "Show all point outcomes"
+      }
+      className="group mx-auto flex w-full max-w-sm flex-col items-center gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2.5 text-center transition-colors hover:border-amber-500/45 hover:bg-amber-500/10"
+    >
+      <span className="flex items-center justify-center gap-2">
+        <span className="text-sm font-black uppercase tracking-[0.14em] text-amber-300 sm:text-base">
+          How many points can I win?
+        </span>
+        <span className="flex h-7 w-7 items-center justify-center rounded-full border border-amber-500/40 bg-[#1a1a1a]">
+          <PointsGuideChevron expanded={expanded} />
+        </span>
+      </span>
+      <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-400/80 group-hover:text-amber-300">
+        {expanded ? "Hide all outcomes" : "Tap to see all outcomes"}
+      </span>
+    </button>
+  );
+}
+
+function ScenarioRow({
+  row,
+  isActive,
+}: {
+  row: RatingScenario;
+  isActive: boolean;
+}) {
+  const isLoss = row.kind === "loss";
+  const isCeiling = row.kind === "ceiling";
+
+  return (
+    <li
+      className={cn(
+        "rounded-lg border px-3 py-2.5",
+        isActive
+          ? "border-amber-500/50 bg-amber-500/10"
+          : "border-[#2a2a2a] bg-[#1a1a1a]",
+        isCeiling && !isActive && "border-zinc-600/40"
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p
+            className={cn(
+              "text-xs font-semibold leading-snug",
+              isLoss ? "text-zinc-300" : "text-white"
+            )}
+          >
+            {row.headline}
+          </p>
+          <p className="mt-0.5 text-[10px] leading-relaxed text-zinc-500">
+            {row.detail}
+          </p>
+        </div>
+        <p
+          className={cn(
+            "shrink-0 text-sm font-black tabular-nums",
+            isLoss
+              ? "text-red-300"
+              : isCeiling
+                ? "text-amber-200"
+                : "text-amber-200/90"
+          )}
+        >
+          {formatRatingPoints(row.points)}
+        </p>
+      </div>
+      {isActive ? (
+        <p className="mt-1.5 text-[9px] font-bold uppercase tracking-wide text-amber-400">
+          Matches your current pick
+        </p>
+      ) : null}
+    </li>
+  );
+}
+
+function CurrentPickPointsSummary({ row }: { row: RatingScenario }) {
+  const isLoss = row.kind === "loss";
+
+  return (
+    <div className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-3 text-center">
+      <p
+        className={cn(
+          "text-2xl font-black tabular-nums leading-none sm:text-3xl",
+          isLoss ? "text-red-300" : "text-amber-200"
+        )}
+      >
+        {formatRatingPoints(row.points)}
+      </p>
+      <p className="mt-2 text-xs font-semibold leading-snug text-white">
+        {row.headline}
+      </p>
+      <p className="mt-1 text-[10px] leading-relaxed text-zinc-500">
+        {row.detail}
+      </p>
+    </div>
+  );
 }
 
 export function RatingPointsGuide({
@@ -178,109 +312,77 @@ export function RatingPointsGuide({
   method: PredictedMethod | null;
   round: number | null;
 }) {
+  const [expanded, setExpanded] = useState(false);
+
   if (!potential) {
     return (
       <div className="rounded-xl border border-[#2a2a2a] bg-[#141414] px-4 py-3">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-          How many points can I earn?
+        <p className="text-center text-sm font-black uppercase tracking-[0.14em] text-amber-300/80">
+          How many points can I win?
         </p>
-        <p className="mt-2 text-xs leading-relaxed text-zinc-500">
-          Select a fighter (or draw) above to see every outcome and how many
-          rating points you would gain or lose.
+        <p className="mt-2 text-center text-xs leading-relaxed text-zinc-500">
+          Select a fighter (or draw) above to see how many rating points you
+          would gain or lose.
         </p>
       </div>
     );
   }
 
   const scenarios = getRatingScenarios(potential);
-  const activeId = activeScenarioId(potential, method, round);
+  const activeId = activeScenarioId(method, round);
+  const activeScenario =
+    scenarios.find((row) => row.id === activeId) ?? scenarios[1];
   const targetPoints = getPotentialWinCeiling(potential);
 
   return (
     <div className="rounded-xl border border-[#2a2a2a] bg-[#141414] px-4 py-3">
-      <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-        How many points can I earn?
-      </p>
-      <p className="mt-1 text-[11px] leading-relaxed text-zinc-400">
-        {potential.tierLabel} pick — each row is a separate outcome. Only one
-        applies after the fight.
-      </p>
+      <PointsGuideHeading
+        expanded={expanded}
+        onToggle={() => setExpanded((open) => !open)}
+      />
 
-      {method || round ? (
-        <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-amber-300">
-            Your pick right now
+      {!expanded ? (
+        <CurrentPickPointsSummary row={activeScenario} />
+      ) : (
+        <>
+          <p className="mt-2 text-center text-[11px] leading-relaxed text-zinc-400">
+            {potential.tierLabel} pick — each row is a separate outcome. Only
+            one applies after the fight.
           </p>
-          <p className="mt-0.5 text-xs text-zinc-200">
-            {method
-              ? `Method: ${methodLabel(method)}`
-              : "No method selected yet"}
-            {round ? ` · Round ${round}` : ""}
+
+          {method || round ? (
+            <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-amber-300">
+                Your pick right now
+              </p>
+              <p className="mt-0.5 text-xs text-zinc-200">
+                {method
+                  ? `Method: ${methodLabel(method)}`
+                  : "No method selected yet"}
+                {round ? ` · Round ${round}` : ""}
+              </p>
+              <p className="mt-1 text-sm font-bold text-amber-200">
+                Up to {formatRatingPoints(targetPoints)} if it all lands
+              </p>
+            </div>
+          ) : null}
+
+          <ul className="mt-3 space-y-2">
+            {scenarios.map((row) => (
+              <ScenarioRow
+                key={row.id}
+                row={row}
+                isActive={row.id === activeId}
+              />
+            ))}
+          </ul>
+
+          <p className="mt-3 text-[10px] leading-relaxed text-zinc-600">
+            Wrong fighter = always {formatRatingPoints(potential.wrongRisk)}.
+            Method and round only count if your main pick (winner) is correct.
           </p>
-          <p className="mt-1 text-sm font-bold text-amber-200">
-            Up to {formatRatingPoints(targetPoints)} if it all lands
-          </p>
-        </div>
-      ) : null}
-
-      <ul className="mt-3 space-y-2">
-        {scenarios.map((row) => {
-          const isActive = row.id === activeId;
-          const isLoss = row.kind === "loss";
-          const isCeiling = row.kind === "ceiling";
-
-          return (
-            <li
-              key={row.id}
-              className={cn(
-                "rounded-lg border px-3 py-2.5",
-                isActive
-                  ? "border-amber-500/50 bg-amber-500/10"
-                  : "border-[#2a2a2a] bg-[#1a1a1a]",
-                isCeiling && !isActive && "border-zinc-600/40"
-              )}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p
-                    className={cn(
-                      "text-xs font-semibold leading-snug",
-                      isLoss ? "text-zinc-300" : "text-white"
-                    )}
-                  >
-                    {row.headline}
-                  </p>
-                  <p className="mt-0.5 text-[10px] leading-relaxed text-zinc-500">
-                    {row.detail}
-                  </p>
-                </div>
-                <p
-                  className={cn(
-                    "shrink-0 text-sm font-black tabular-nums",
-                    isLoss
-                      ? "text-red-300"
-                      : isCeiling
-                        ? "text-amber-200"
-                        : "text-amber-200/90"
-                  )}
-                >
-                  {formatRatingPoints(row.points)}
-                </p>
-              </div>
-              {isActive ? (
-                <p className="mt-1.5 text-[9px] font-bold uppercase tracking-wide text-amber-400">
-                  Matches your current extras
-                </p>
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
-
-      <p className="mt-3 text-[10px] leading-relaxed text-zinc-600">
-        Wrong fighter = always {formatRatingPoints(potential.wrongRisk)}. Method
-        and round only count if your main pick (winner) is correct.
-      </p>
+        </>
+      )}
     </div>
   );
 }

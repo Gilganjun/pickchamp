@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
 export type AuthActionResult =
-  | { ok: true }
+  | { ok: true; needsEmailConfirmation?: boolean }
   | { ok: false; error: string };
 
 function normalizeUsername(username: string): string {
@@ -93,6 +93,7 @@ export async function signUpAction(formData: FormData): Promise<AuthActionResult
 
   return {
     ok: true,
+    needsEmailConfirmation: true,
   };
 }
 

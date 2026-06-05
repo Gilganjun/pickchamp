@@ -35,7 +35,9 @@ export default function SignUpPage() {
               return;
             }
             setSuccess(
-              "Account created. If email confirmation is enabled in Supabase, check your inbox — then log in."
+              result.needsEmailConfirmation
+                ? "You're in! Check your email for a confirmation link, then log in to start picking."
+                : "You're in! Log in to start picking."
             );
           });
         }}
