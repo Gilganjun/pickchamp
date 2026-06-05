@@ -9,7 +9,6 @@ import { getMockEvents } from "@/data/mock";
 import type {
   Event,
   FightWithRelations,
-  PickTab,
   Prediction,
   PredictedMethod,
   PredictedOutcome,
@@ -20,14 +19,19 @@ import { inferFightTab } from "@/lib/utils";
 
 export type EventCardFilter = "all" | string;
 
+/** Upcoming + in-progress fights shown on the Picks page (settled excluded). */
+export function isActivePicksFight(fight: FightWithRelations): boolean {
+  const tab = inferFightTab(fight.status, fight.lock_time);
+  return tab === "upcoming" || tab === "live";
+}
+
 function filterFightsForPicksView(
   fights: FightWithRelations[],
-  tab: PickTab,
   sportFilter: SportFilter,
   eventFilter: EventCardFilter
 ): FightWithRelations[] {
   return fights
-    .filter((f) => inferFightTab(f.status, f.lock_time) === tab)
+    .filter(isActivePicksFight)
     .filter((f) => sportFilter === "all" || f.sport === sportFilter)
     .filter((f) => eventFilter === "all" || f.event_id === eventFilter)
     .sort((a, b) => {
@@ -45,7 +49,6 @@ function filterFightsForPicksView(
 }
 
 export async function getFightsForPicks(
-  tab: PickTab,
   sportFilter: SportFilter,
   userId?: string,
   eventFilter: EventCardFilter = "all"
@@ -58,16 +61,15 @@ export async function getFightsForPicks(
     fights = getMockFightWithRelations(effectiveUserId);
   }
 
-  return filterFightsForPicksView(fights, tab, sportFilter, eventFilter);
+  return filterFightsForPicksView(fights, sportFilter, eventFilter);
 }
 
-/** Events that have at least one fight in the current picks tab + sport filter */
+/** Events that have at least one active fight for the current sport filter */
 export async function getEventsForPicks(
-  tab: PickTab,
   sportFilter: SportFilter,
   userId?: string
 ): Promise<Event[]> {
-  const fights = await getFightsForPicks(tab, sportFilter, userId, "all");
+  const fights = await getFightsForPicks(sportFilter, userId, "all");
   const eventIds = [...new Set(fights.map((f) => f.event_id))];
   return getMockEvents()
     .filter((e) => eventIds.includes(e.id))

@@ -15,7 +15,7 @@ export const PICK_IMPACT_SOUND_DELAY_MS = 120;
 export const PICK_IMPACT_SOUND_VOLUME = 0.18;
 
 interface PendingSound {
-  id: ReturnType<typeof setTimeout>;
+  id: number;
   comboId: number;
 }
 
@@ -29,7 +29,7 @@ let activeComboId = 0;
 const pendingSounds: PendingSound[] = [];
 const playingAudios = new Set<HTMLAudioElement>();
 
-function removePendingSound(id: ReturnType<typeof setTimeout>): void {
+function removePendingSound(id: number): void {
   const index = pendingSounds.findIndex((entry) => entry.id === id);
   if (index >= 0) {
     pendingSounds.splice(index, 1);

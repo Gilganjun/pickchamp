@@ -10,6 +10,7 @@ interface AppShellProps {
   showTagline?: boolean;
   showBottomNav?: boolean;
   prominentBrand?: boolean;
+  showProfileLink?: boolean;
 }
 
 export function AppShell({
@@ -18,6 +19,7 @@ export function AppShell({
   showTagline = true,
   showBottomNav = true,
   prominentBrand = false,
+  showProfileLink = false,
 }: AppShellProps) {
   return (
     <div className="min-h-dvh w-full pb-24">
@@ -27,6 +29,7 @@ export function AppShell({
             showTagline={showTagline}
             prominent={prominentBrand}
             centered={prominentBrand}
+            showProfileLink={showProfileLink}
           />
         )}
         {children}
