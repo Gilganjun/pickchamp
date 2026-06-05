@@ -129,39 +129,74 @@ function EventCardSection({
 
 interface PicksClientProps {
   initialIsLoggedIn?: boolean;
+  initialEvents?: Event[];
+  initialFights?: FightWithRelations[];
+  initialError?: string | null;
 }
 
 export function PicksClient({
   initialIsLoggedIn = false,
+  initialEvents = [],
+  initialFights = [],
+  initialError = null,
 }: PicksClientProps) {
   const [sport, setSport] = useState<SF>("all");
   const [eventCard, setEventCard] = useState<CardFilterValue>("all");
-  const [pickEvents, setPickEvents] = useState<Event[]>([]);
-  const [fights, setFights] = useState<FightWithRelations[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [pickEvents, setPickEvents] = useState<Event[]>(initialEvents);
+  const [fights, setFights] = useState<FightWithRelations[]>(initialFights);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(initialError);
   const [isLoggedIn, setIsLoggedIn] = useState(initialIsLoggedIn);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const data = await loadPicksPageDataAction(sport, eventCard);
-    const resolvedCard = resolveCardFilterForSport(eventCard, data.events);
-    if (resolvedCard !== eventCard) {
-      setEventCard(resolvedCard);
-      const refreshed = await loadPicksPageDataAction(sport, resolvedCard);
-      setPickEvents(refreshed.events);
-      setFights(refreshed.fights);
-      setIsLoggedIn(refreshed.isLoggedIn);
-    } else {
-      setPickEvents(data.events);
-      setFights(data.fights);
-      setIsLoggedIn(data.isLoggedIn);
+    setError(null);
+    try {
+      const data = await loadPicksPageDataAction(sport, eventCard);
+      if (!data.ok) {
+        setError(data.error);
+        setPickEvents([]);
+        setFights([]);
+        return;
+      }
+
+      const resolvedCard = resolveCardFilterForSport(eventCard, data.events);
+      if (resolvedCard !== eventCard) {
+        setEventCard(resolvedCard);
+        const refreshed = await loadPicksPageDataAction(sport, resolvedCard);
+        if (!refreshed.ok) {
+          setError(refreshed.error);
+          setPickEvents([]);
+          setFights([]);
+          return;
+        }
+        setPickEvents(refreshed.events);
+        setFights(refreshed.fights);
+        setIsLoggedIn(refreshed.isLoggedIn);
+      } else {
+        setPickEvents(data.events);
+        setFights(data.fights);
+        setIsLoggedIn(data.isLoggedIn);
+      }
+    } catch (loadError) {
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : "Failed to load fight cards."
+      );
+      setPickEvents([]);
+      setFights([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [sport, eventCard]);
 
   useEffect(() => {
+    if (sport === "all" && eventCard === "all") {
+      return;
+    }
     load();
-  }, [load]);
+  }, [load, sport, eventCard]);
 
   const handleSportChange = (next: SF) => {
     setSport(next);
@@ -182,11 +217,16 @@ export function PicksClient({
       </div>
 
       <div className="mt-3 space-y-4">
+        {error ? (
+          <p className="rounded-xl border border-red-900/40 bg-red-950/30 px-4 py-6 text-center text-sm text-red-300">
+            {error}
+          </p>
+        ) : null}
         {loading ? (
           <p className="py-12 text-center text-sm text-zinc-500">
             Loading fights…
           </p>
-        ) : fights.length === 0 ? (
+        ) : fights.length === 0 && !error ? (
           <p className="py-12 text-center text-sm text-zinc-500">
             No fights in this view. Try another sport or event card.
           </p>

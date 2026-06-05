@@ -13,20 +13,33 @@ export async function loadPicksPageDataAction(
   sport: SportFilter,
   eventCard: EventCardFilter
 ) {
-  const user = await getAuthUser();
-  const userId = user?.id;
+  try {
+    const user = await getAuthUser();
+    const userId = user?.id;
 
-  const [events, fights] = await Promise.all([
-    getEventsForPicks(sport, userId),
-    getFightsForPicks(sport, userId, eventCard),
-  ]);
+    const [events, fights] = await Promise.all([
+      getEventsForPicks(sport, userId),
+      getFightsForPicks(sport, userId, eventCard),
+    ]);
 
-  return {
-    events,
-    fights,
-    userId: userId ?? null,
-    isLoggedIn: Boolean(userId),
-  };
+    return {
+      ok: true as const,
+      events,
+      fights,
+      userId: userId ?? null,
+      isLoggedIn: Boolean(userId),
+    };
+  } catch (error) {
+    return {
+      ok: false as const,
+      error:
+        error instanceof Error ? error.message : "Failed to load fight cards.",
+      events: [],
+      fights: [],
+      userId: null,
+      isLoggedIn: false,
+    };
+  }
 }
 
 export async function savePredictionAction(input: {
