@@ -136,7 +136,7 @@ export async function signInAction(formData: FormData): Promise<AuthActionResult
 
 export async function signOutAction(): Promise<void> {
   if (!usesLiveSupabase()) {
-    redirect("/");
+    redirect("/picks");
   }
 
   const supabase = await createClient();

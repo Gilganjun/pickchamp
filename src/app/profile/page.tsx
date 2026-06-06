@@ -76,8 +76,8 @@ export default async function ProfilePage() {
       <AppShell>
         <p className="py-12 text-center text-zinc-500">
           Profile not found.{" "}
-          <Link href="/" className="text-red-500">
-            Go home
+          <Link href="/picks" className="text-red-500">
+            Go to picks
           </Link>
         </p>
       </AppShell>
