@@ -1,4 +1,4 @@
-import { getGradedCount } from "@/lib/rankings";
+import { getEligibilityThreshold, getGradedCount } from "@/lib/rankings";
 import { getLockCountdown, inferFightTab, isFightLocked } from "@/lib/utils";
 import type {
   FightResult,
@@ -30,7 +30,7 @@ export function getProgress(current: number, required: number) {
   };
 }
 
-export { getEligibilityThreshold } from "@/lib/rankings";
+export { getEligibilityThreshold };
 
 export function formatRankStatus(status: RankDisplay["status"]): string {
   if (status === "inactive") return "Not Yet Qualified";
@@ -51,6 +51,48 @@ export function getQualificationRemainingLabel(remaining: number): string {
 
 export function getGlobalQualificationSportHint(): string {
   return "(Boxing and/or MMA)";
+}
+
+export type GlobalRankHeroState =
+  | { kind: "needs_locked"; remaining: number }
+  | { kind: "waiting_results" }
+  | { kind: "official"; rank: number };
+
+export function formatPicksToQualifyLabel(remaining: number): string {
+  const n = Math.max(0, remaining);
+  return `${n} PICK${n === 1 ? "" : "S"} TO QUALIFY`;
+}
+
+/** Locked picks: predictions on fights past lock time (graded or not). */
+export function getLockedPickCount(
+  predictions: Prediction[],
+  fights: FightWithRelations[]
+): number {
+  const fightById = new Map(fights.map((f) => [f.id, f]));
+  return predictions.reduce((count, pred) => {
+    const fight = fightById.get(pred.fight_id);
+    if (fight && isFightLocked(fight)) {
+      return count + 1;
+    }
+    return count;
+  }, 0);
+}
+
+export function getGlobalRankHeroState(
+  lockedPickCount: number,
+  rank: RankDisplay
+): GlobalRankHeroState {
+  const threshold = getEligibilityThreshold("global");
+  if (rank.status === "official" && rank.rank != null) {
+    return { kind: "official", rank: rank.rank };
+  }
+  if (lockedPickCount >= threshold) {
+    return { kind: "waiting_results" };
+  }
+  return {
+    kind: "needs_locked",
+    remaining: Math.max(0, threshold - lockedPickCount),
+  };
 }
 
 export function getSportQualificationHint(tab: "boxing" | "mma"): string {

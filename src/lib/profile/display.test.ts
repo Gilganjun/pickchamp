@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatPicksToQualifyLabel,
   getCurrentPickItems,
+  getGlobalRankHeroState,
+  getLockedPickCount,
   getProgress,
   getRecentFormOutcomes,
   getRecentFormSummary,
   hasHiddenOpenPicksOnPublicProfile,
   getSportPickStats,
 } from "./display";
+import type { RankDisplay } from "@/types";
 import type { Event, FightWithRelations, Profile, Prediction } from "@/types";
 
 function makeFight(
@@ -64,6 +68,80 @@ function makePrediction(fightId: string, gradedAt: string | null): Prediction {
     grading_details: null,
   };
 }
+
+describe("formatPicksToQualifyLabel", () => {
+  it("uses singular pick when one remains", () => {
+    expect(formatPicksToQualifyLabel(1)).toBe("1 PICK TO QUALIFY");
+  });
+
+  it("uses plural picks otherwise", () => {
+    expect(formatPicksToQualifyLabel(10)).toBe("10 PICKS TO QUALIFY");
+    expect(formatPicksToQualifyLabel(3)).toBe("3 PICKS TO QUALIFY");
+  });
+});
+
+describe("getLockedPickCount", () => {
+  const futureLock = "2099-06-10T18:00:00Z";
+  const pastLock = "2020-01-01T18:00:00Z";
+
+  it("counts predictions on locked fights only", () => {
+    const fights = [
+      makeFight("f-open", futureLock, "upcoming"),
+      makeFight("f-locked", pastLock, "locked"),
+      makeFight("f-settled", pastLock, "settled"),
+    ];
+    const predictions = [
+      makePrediction("f-open", null),
+      makePrediction("f-locked", null),
+      makePrediction("f-settled", "2020-01-02"),
+    ];
+
+    expect(getLockedPickCount(predictions, fights)).toBe(2);
+  });
+});
+
+describe("getGlobalRankHeroState", () => {
+  const officialRank: RankDisplay = {
+    label: "#412 World",
+    status: "official",
+    rank: 412,
+  };
+  const provisionalRank: RankDisplay = {
+    label: "Not Yet Qualified",
+    status: "provisional",
+  };
+  const inactiveRank: RankDisplay = {
+    label: "Not Yet Qualified",
+    status: "inactive",
+  };
+
+  it("shows picks remaining when fewer than 10 locked picks", () => {
+    expect(getGlobalRankHeroState(0, inactiveRank)).toEqual({
+      kind: "needs_locked",
+      remaining: 10,
+    });
+    expect(getGlobalRankHeroState(7, provisionalRank)).toEqual({
+      kind: "needs_locked",
+      remaining: 3,
+    });
+  });
+
+  it("shows waiting when locked threshold met but not officially ranked", () => {
+    expect(getGlobalRankHeroState(10, provisionalRank)).toEqual({
+      kind: "waiting_results",
+    });
+    expect(getGlobalRankHeroState(12, inactiveRank)).toEqual({
+      kind: "waiting_results",
+    });
+  });
+
+  it("shows official rank when on the leaderboard", () => {
+    expect(getGlobalRankHeroState(10, officialRank)).toEqual({
+      kind: "official",
+      rank: 412,
+    });
+  });
+});
 
 describe("getProgress", () => {
   it("computes percent and remaining picks", () => {

@@ -2,13 +2,10 @@ import { ProfileQuickStats } from "@/components/profile/ProfileQuickStats";
 import { ProgressBar } from "@/components/profile/ProgressBar";
 import { RankGraphic } from "@/components/profile/RankGraphic";
 import {
-  getEligibilityThreshold,
-  getGlobalQualificationSportHint,
-  getGradedCountForTab,
+  formatPicksToQualifyLabel,
+  getGlobalRankHeroState,
+  getLockedPickCount,
   getPredictorTitle,
-  getProgress,
-  getQualificationProgressLabel,
-  getQualificationRemainingLabel,
 } from "@/lib/profile/display";
 import { getTierIndex } from "@/lib/profile/rankGraphics";
 import {
@@ -16,35 +13,24 @@ import {
   getPointsToNextRankLabel,
   getRatingTier,
 } from "@/lib/profile/ratingTiers";
-import type { Profile, RankDisplay } from "@/types";
+import type { FightWithRelations, Profile, Prediction, RankDisplay } from "@/types";
 
 interface ProfileHeroProps {
   profile: Profile;
   rank: RankDisplay;
+  predictions: Prediction[];
+  fights: FightWithRelations[];
   accuracy: number;
   totalPicks: number;
   currentStreak: number;
   perfectPicks: number;
 }
 
-function globalQualificationSecondaryLine(
-  rank: RankDisplay,
-  current: number,
-  threshold: number,
-  remaining: number
-): string {
-  if (rank.status === "inactive") {
-    return "Make your first qualifying pick";
-  }
-  if (remaining > 0) {
-    return getQualificationRemainingLabel(remaining);
-  }
-  return getQualificationProgressLabel(current, threshold);
-}
-
 export function ProfileHero({
   profile,
   rank,
+  predictions,
+  fights,
   accuracy,
   totalPicks,
   currentStreak,
@@ -54,16 +40,8 @@ export function ProfileHero({
     profile.avatar_initials ?? profile.username.slice(0, 2).toUpperCase();
   const tier = getRatingTier(profile.global_rating);
   const predictorTitle = getPredictorTitle(profile.global_rating);
-  const threshold = getEligibilityThreshold("global");
-  const graded = getGradedCountForTab(profile, "global");
-  const qualification = getProgress(graded, threshold);
-  const isOfficial = rank.status === "official";
-  const qualSecondary = globalQualificationSecondaryLine(
-    rank,
-    qualification.current,
-    threshold,
-    qualification.remaining
-  );
+  const lockedPickCount = getLockedPickCount(predictions, fights);
+  const globalRankState = getGlobalRankHeroState(lockedPickCount, rank);
   const tierIndex = getTierIndex(tier.currentTierName);
   const pickFistScore = getPickFistScoreDisplay(tier);
 
@@ -125,35 +103,28 @@ export function ProfileHero({
           <p className="text-[8px] font-bold uppercase tracking-[0.12em] text-zinc-500">
             Global Rank
           </p>
-          {isOfficial ? (
+          {globalRankState.kind === "official" ? (
             <>
               <p className="mt-0.5 text-xl font-black tabular-nums leading-none text-white">
-                #{rank.rank?.toLocaleString() ?? "—"}
+                #{globalRankState.rank.toLocaleString()}
               </p>
               <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wide text-zinc-400">
                 World
               </p>
             </>
-          ) : (
+          ) : globalRankState.kind === "waiting_results" ? (
             <>
-              <p className="mt-0.5 text-xs font-black uppercase leading-tight tracking-tight text-white">
-                Not Yet Qualified
+              <p className="mt-0.5 text-xs font-black uppercase leading-tight tracking-tight text-[#d4a853]">
+                Qualified
               </p>
-              <p className="mt-1 text-[8px] leading-tight text-zinc-400">
-                {qualSecondary}
-              </p>
-              {qualification.current > 0 && qualification.remaining > 0 ? (
-                <p className="mt-0.5 text-[7px] leading-tight text-zinc-500">
-                  {getQualificationProgressLabel(
-                    qualification.current,
-                    threshold
-                  )}
-                </p>
-              ) : null}
-              <p className="mt-0.5 text-[7px] leading-tight text-zinc-500">
-                {getGlobalQualificationSportHint()}
+              <p className="mt-1 text-[8px] font-semibold uppercase leading-tight tracking-wide text-zinc-500">
+                Waiting for fight results
               </p>
             </>
+          ) : (
+            <p className="mt-0.5 text-xs font-black uppercase leading-tight tracking-tight text-orange-500">
+              {formatPicksToQualifyLabel(globalRankState.remaining)}
+            </p>
           )}
         </div>
       </div>

@@ -54,6 +54,8 @@ export function ProfilePageContent({
       <ProfileHero
         profile={profile}
         rank={ranks.global}
+        predictions={predictions}
+        fights={fights}
         accuracy={accuracy}
         totalPicks={profile.total_picks}
         currentStreak={profile.current_streak}

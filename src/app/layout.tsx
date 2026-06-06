@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 const siteTitle = "PickFist — Fight Prediction Rankings";
 const siteDescription =
-  "You Don't Know S*** About Fighting. Global combat-sports prediction competition.";
+  "Who Is The World's Best Fight Predictor? Global combat-sports prediction competition.";
 
 export const metadata: Metadata = {
   title: siteTitle,

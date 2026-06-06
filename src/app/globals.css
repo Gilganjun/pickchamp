@@ -358,7 +358,42 @@ body {
   animation: pick-name-swipe 5s ease-in-out infinite;
 }
 
+@keyframes rotating-subheading-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.375rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes rotating-subheading-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-0.375rem);
+  }
+}
+
+.rotating-subheading-enter {
+  animation: rotating-subheading-in 500ms ease-out forwards;
+}
+
+.rotating-subheading-exit {
+  animation: rotating-subheading-out 500ms ease-in forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .rotating-subheading-enter,
+  .rotating-subheading-exit {
+    animation: none;
+  }
+
   .pick-name-swipe {
     animation: none;
   }

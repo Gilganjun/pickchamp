@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { RotatingSubheading } from "@/components/RotatingSubheading";
 import { cn } from "@/lib/utils";
 
 interface BrandHeaderProps {
@@ -84,15 +85,13 @@ export function BrandHeader({
         </span>
       </Link>
       {showTagline && (
-        <p
+        <RotatingSubheading
           className={cn(
-            "text-zinc-400 leading-snug",
-            centered ? "mx-auto max-w-sm" : "max-w-sm",
+            "text-zinc-400",
+            centered && "mx-auto",
             prominent ? "mt-1 text-xs sm:text-sm" : "mt-2 text-xs"
           )}
-        >
-          You Don&apos;t Know S*** About Fighting.
-        </p>
+        />
       )}
     </header>
   );
