@@ -1,19 +1,28 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
-import { signUpAction } from "@/app/actions/auth";
+import { useSearchParams } from "next/navigation";
+import { useState, useTransition, Suspense } from "react";
+import {
+  signInWithGoogleSignupAction,
+  signUpAction,
+} from "@/app/actions/auth";
 import { AuthCard } from "@/components/auth/AuthCard";
+import { AuthDivider } from "@/components/auth/AuthDivider";
+import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
+import { getAuthErrorMessage } from "@/lib/auth/errors";
 
-export default function SignUpPage() {
-  const [error, setError] = useState<string | null>(null);
+function SignUpForm() {
+  const searchParams = useSearchParams();
+  const oauthError = getAuthErrorMessage(searchParams.get("error"));
+  const [error, setError] = useState<string | null>(oauthError);
   const [success, setSuccess] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   return (
     <AuthCard
       title="Sign up"
-      subtitle="Create your PickFist account in seconds."
+      subtitle="Choose your username, then sign up with email or Google."
       footer={
         <>
           Already have an account?{" "}
@@ -102,7 +111,22 @@ export default function SignUpPage() {
         >
           {pending ? "Creating account…" : "Sign up"}
         </button>
+
+        <AuthDivider />
+
+        <GoogleAuthButton
+          disabled={pending}
+          formAction={signInWithGoogleSignupAction}
+        />
       </form>
     </AuthCard>
+  );
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense>
+      <SignUpForm />
+    </Suspense>
   );
 }

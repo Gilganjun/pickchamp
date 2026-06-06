@@ -5,7 +5,7 @@ interface AuthCardProps {
   title: string;
   subtitle: string;
   children: ReactNode;
-  footer: ReactNode;
+  footer?: ReactNode;
 }
 
 export function AuthCard({ title, subtitle, children, footer }: AuthCardProps) {
@@ -21,7 +21,9 @@ export function AuthCard({ title, subtitle, children, footer }: AuthCardProps) {
           <p className="mt-2 text-sm text-zinc-500">{subtitle}</p>
         </div>
         {children}
-        <div className="mt-6 text-center text-sm text-zinc-500">{footer}</div>
+        {footer ? (
+          <div className="mt-6 text-center text-sm text-zinc-500">{footer}</div>
+        ) : null}
       </div>
     </div>
   );

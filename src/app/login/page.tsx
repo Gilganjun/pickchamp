@@ -1,18 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
-import { signInAction } from "@/app/actions/auth";
+import { useSearchParams } from "next/navigation";
+import { useState, useTransition, Suspense } from "react";
+import {
+  signInAction,
+  signInWithGoogleLoginAction,
+} from "@/app/actions/auth";
 import { AuthCard } from "@/components/auth/AuthCard";
+import { AuthDivider } from "@/components/auth/AuthDivider";
+import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
+import { getAuthErrorMessage } from "@/lib/auth/errors";
 
-export default function LoginPage() {
-  const [error, setError] = useState<string | null>(null);
+function LoginForm() {
+  const searchParams = useSearchParams();
+  const oauthError = getAuthErrorMessage(searchParams.get("error"));
+  const [error, setError] = useState<string | null>(oauthError);
   const [pending, startTransition] = useTransition();
 
   return (
     <AuthCard
       title="Log in"
-      subtitle="Save picks and track your rating."
+      subtitle="Log in with email and password or Google."
       footer={
         <>
           No account?{" "}
@@ -72,6 +81,20 @@ export default function LoginPage() {
           {pending ? "Logging in…" : "Log in"}
         </button>
       </form>
+
+      <AuthDivider />
+
+      <form action={signInWithGoogleLoginAction}>
+        <GoogleAuthButton disabled={pending} />
+      </form>
     </AuthCard>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }
