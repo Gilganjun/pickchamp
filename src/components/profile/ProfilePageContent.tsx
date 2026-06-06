@@ -1,12 +1,14 @@
-import { PerformanceSummary } from "@/components/profile/PerformanceSummary";
+import { CurrentPicksSection } from "@/components/profile/CurrentPicksSection";
+import { DetailedStatsSection } from "@/components/profile/DetailedStatsSection";
 import { ProfileHero } from "@/components/profile/ProfileHero";
-import { QualificationCard } from "@/components/profile/QualificationCard";
 import { RecentForm } from "@/components/profile/RecentForm";
 import { RecentPredictionCard } from "@/components/profile/RecentPredictionCard";
 import { SportBreakdownCard } from "@/components/profile/SportBreakdownCard";
 import {
+  getCurrentPickItems,
   getGlobalAccuracy,
-  getRecentFormOutcomes,
+  getRecentFormSummary,
+  hasHiddenOpenPicksOnPublicProfile,
 } from "@/lib/profile/display";
 import type { FightWithRelations, Prediction, Profile } from "@/types";
 import type { getProfileRanks } from "@/lib/data/profiles";
@@ -17,6 +19,7 @@ interface ProfilePageContentProps {
   predictions: Prediction[];
   fights: FightWithRelations[];
   subtitle?: string;
+  isOwnProfile?: boolean;
   showRecentPredictions?: boolean;
 }
 
@@ -25,11 +28,18 @@ export function ProfilePageContent({
   ranks,
   predictions,
   fights,
-  subtitle,
+  isOwnProfile = false,
   showRecentPredictions = true,
 }: ProfilePageContentProps) {
   const accuracy = getGlobalAccuracy(profile);
-  const formOutcomes = getRecentFormOutcomes(predictions, 10);
+  const formSummary = getRecentFormSummary(predictions, 5);
+  const currentPicks = getCurrentPickItems(predictions, fights, {
+    isOwnProfile,
+  });
+  const showHiddenMessage =
+    !isOwnProfile &&
+    currentPicks.length === 0 &&
+    hasHiddenOpenPicksOnPublicProfile(predictions, fights);
 
   const gradedRecent = [...predictions]
     .filter((p) => p.graded_at)
@@ -40,48 +50,59 @@ export function ProfilePageContent({
     .slice(0, 8);
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-5 pb-4">
-      <ProfileHero profile={profile} subtitle={subtitle} />
-
-      <QualificationCard profile={profile} rank={ranks.global} />
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <SportBreakdownCard
-          sport="boxing"
-          profile={profile}
-          rank={ranks.boxing}
-          rating={profile.boxing_rating}
-        />
-        <SportBreakdownCard
-          sport="mma"
-          profile={profile}
-          rank={ranks.mma}
-          rating={profile.mma_rating}
-        />
-      </div>
-
-      <PerformanceSummary
+    <div className="pickfist-content mx-auto w-full max-w-lg space-y-4 pb-4">
+      <ProfileHero
+        profile={profile}
+        rank={ranks.global}
         accuracy={accuracy}
         totalPicks={profile.total_picks}
+        currentStreak={profile.current_streak}
         perfectPicks={profile.perfect_picks}
-        bestStreak={profile.best_streak}
       />
 
-      <RecentForm
-        outcomes={formOutcomes}
-        currentStreak={profile.current_streak}
+      <CurrentPicksSection
+        items={currentPicks}
+        isOwnProfile={isOwnProfile}
+        showHiddenMessage={showHiddenMessage}
       />
+
+      <div className="grid grid-cols-2 gap-2">
+        <RecentForm
+          outcomes={formSummary.outcomes}
+          summaryLabel={formSummary.label}
+        />
+        <section>
+          <h2 className="mb-2 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+            Sport Breakdown
+          </h2>
+          <div className="space-y-2">
+            <SportBreakdownCard
+              sport="boxing"
+              profile={profile}
+              rank={ranks.boxing}
+              rating={profile.boxing_rating}
+              compact
+            />
+            <SportBreakdownCard
+              sport="mma"
+              profile={profile}
+              rank={ranks.mma}
+              rating={profile.mma_rating}
+              compact
+            />
+          </div>
+        </section>
+      </div>
 
       {showRecentPredictions && (
         <section>
           <h2 className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-            Recent Predictions
+            Recent Results
           </h2>
-          <div className="mt-3 space-y-3">
+          <div className="mt-2 space-y-2">
             {gradedRecent.length === 0 ? (
-              <p className="rounded-xl border border-[#2a2a2a] bg-[#111111] p-4 text-sm text-zinc-400">
-                No graded predictions yet. Lock in a pick and check back after
-                the fight settles.
+              <p className="rounded-lg border border-[#2a2a2a] bg-[#111111] px-3 py-2.5 text-xs text-zinc-500">
+                No graded predictions yet.
               </p>
             ) : (
               gradedRecent.map((pred) => (
@@ -95,6 +116,8 @@ export function ProfilePageContent({
           </div>
         </section>
       )}
+
+      <DetailedStatsSection profile={profile} ranks={ranks} />
     </div>
   );
 }

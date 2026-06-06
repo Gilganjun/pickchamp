@@ -13,6 +13,17 @@ export function hasSupabaseConfig(): boolean {
   );
 }
 
+/**
+ * Whether the app should use Supabase for auth + data.
+ * Production: when env vars are set.
+ * Local dev: mock data by default — set PICKFIST_USE_SUPABASE=true to test live Supabase.
+ */
+export function usesLiveSupabase(): boolean {
+  if (!hasSupabaseConfig()) return false;
+  if (process.env.NODE_ENV === "production") return true;
+  return process.env.PICKFIST_USE_SUPABASE === "true";
+}
+
 export function getAdminEmails(): string[] {
   const raw = process.env.ADMIN_EMAILS ?? "";
   return raw

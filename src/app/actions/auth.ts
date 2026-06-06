@@ -1,6 +1,6 @@
 "use server";
 
-import { hasSupabaseConfig } from "@/lib/config";
+import { usesLiveSupabase } from "@/lib/config";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
@@ -43,8 +43,11 @@ async function ensureProfileExists(userId: string, username: string) {
 }
 
 export async function signUpAction(formData: FormData): Promise<AuthActionResult> {
-  if (!hasSupabaseConfig()) {
-    return { ok: false, error: "Supabase is not configured." };
+  if (!usesLiveSupabase()) {
+    return {
+      ok: false,
+      error: "Local demo mode — use /profile and /picks without logging in.",
+    };
   }
 
   const username = String(formData.get("username") ?? "");
@@ -98,8 +101,11 @@ export async function signUpAction(formData: FormData): Promise<AuthActionResult
 }
 
 export async function signInAction(formData: FormData): Promise<AuthActionResult> {
-  if (!hasSupabaseConfig()) {
-    return { ok: false, error: "Supabase is not configured." };
+  if (!usesLiveSupabase()) {
+    return {
+      ok: false,
+      error: "Local demo mode — use /profile and /picks without logging in.",
+    };
   }
 
   const email = String(formData.get("email") ?? "").trim();
@@ -129,7 +135,7 @@ export async function signInAction(formData: FormData): Promise<AuthActionResult
 }
 
 export async function signOutAction(): Promise<void> {
-  if (!hasSupabaseConfig()) {
+  if (!usesLiveSupabase()) {
     redirect("/");
   }
 

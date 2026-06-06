@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { ProfilePageContent } from "@/components/profile/ProfilePageContent";
 import { getMockFightWithRelations } from "@/data/mock";
-import { hasSupabaseConfig } from "@/lib/config";
+import { usesLiveSupabase } from "@/lib/config";
 import { getUserPredictions } from "@/lib/data/fights";
 import { fetchFightWithRelations } from "@/lib/data/supabase-fetch";
 import {
@@ -21,7 +21,7 @@ export default async function PublicProfilePage({
 
   const ranks = await getProfileRanks(profile);
   const predictions = await getUserPredictions(profile.id);
-  const fights = hasSupabaseConfig()
+  const fights = usesLiveSupabase()
     ? await fetchFightWithRelations(profile.id)
     : getMockFightWithRelations(profile.id);
 
@@ -33,6 +33,7 @@ export default async function PublicProfilePage({
         predictions={predictions}
         fights={fights}
         subtitle={profile.display_name ?? undefined}
+        isOwnProfile={false}
       />
     </AppShell>
   );

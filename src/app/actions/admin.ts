@@ -9,10 +9,13 @@ import {
   mockFights,
   mockProfiles,
   mockResults,
-  mockPredictions,
 } from "@/data/mock";
+import {
+  getAllDemoPredictions,
+  updateDemoPrediction,
+} from "@/lib/mock/demoPredictionStore";
 import { requireAdminUser } from "@/lib/auth/admin";
-import { hasSupabaseConfig } from "@/lib/config";
+import { usesLiveSupabase } from "@/lib/config";
 import {
   applyRatingToProfile,
   gradePredictionsForFight,
@@ -33,7 +36,7 @@ import type { Event, Fight, FightResult, ResultMethod, ResultOutcome } from "@/t
 
 async function assertAdminAccess() {
   const gate = await requireAdminUser();
-  if (!hasSupabaseConfig()) {
+  if (!usesLiveSupabase()) {
     return gate;
   }
   if (!gate.ok) {
@@ -332,7 +335,9 @@ export async function settleFight(formData: FormData) {
       : "settled";
   fight.updated_at = new Date().toISOString();
 
-  const predictions = mockPredictions.filter((p) => p.fight_id === fightId);
+  const predictions = getAllDemoPredictions().filter(
+    (p) => p.fight_id === fightId
+  );
   const { graded, summary } = gradePredictionsForFight(
     fight,
     result,
@@ -340,13 +345,10 @@ export async function settleFight(formData: FormData) {
   );
 
   for (const g of graded) {
-    const idx = mockPredictions.findIndex((p) => p.id === g.id);
-    if (idx >= 0) {
-      mockPredictions[idx] = {
-        ...g,
-        grading_details: g.gradingDetails,
-      };
-    }
+    updateDemoPrediction(g.id, {
+      ...g,
+      grading_details: g.gradingDetails,
+    });
     const profileIdx = mockProfiles.findIndex((p) => p.id === g.user_id);
     if (profileIdx >= 0 && g.rating_change != null) {
       mockProfiles[profileIdx] = applyRatingToProfile(
@@ -365,7 +367,7 @@ export async function settleFight(formData: FormData) {
 export async function getAdminData() {
   await assertAdminAccess();
 
-  if (hasSupabaseConfig()) {
+  if (usesLiveSupabase()) {
     const [events, fights, profiles] = await Promise.all([
       fetchAllEvents(),
       fetchAllFights(),

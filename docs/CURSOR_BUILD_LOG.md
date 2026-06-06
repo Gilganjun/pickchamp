@@ -177,4 +177,12 @@ Effective tier from admin favourite fields + user pick → `TIER_RATINGS[tier]` 
 
 ---
 
+## Display rank ladder (profile UI)
+
+- Added 12-step **display-only** progression in `src/lib/profile/ratingTiers.ts` (Novice → All-Time Great).
+- Internal numeric ratings in `profiles` are **unchanged**; V2 scoring untouched.
+- Profile/sport UI shows rank name + progress; raw rating is secondary text only.
+
+---
+
 *End of build log.*

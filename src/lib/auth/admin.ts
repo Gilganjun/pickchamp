@@ -1,8 +1,8 @@
-import { getAdminEmails, hasSupabaseConfig } from "@/lib/config";
+import { getAdminEmails, usesLiveSupabase } from "@/lib/config";
 import { getAuthUser } from "@/lib/auth/session";
 
 export async function requireAdminUser() {
-  if (!hasSupabaseConfig()) {
+  if (!usesLiveSupabase()) {
     return { ok: true as const, email: null, mockMode: true };
   }
 

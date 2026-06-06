@@ -4,7 +4,7 @@ import {
   MOCK_USER_ID,
   upsertMockPrediction,
 } from "@/data/mock";
-import { hasSupabaseConfig } from "@/lib/config";
+import { usesLiveSupabase } from "@/lib/config";
 import { getMockEvents } from "@/data/mock";
 import { mapPrediction } from "@/lib/supabase/mappers";
 import type {
@@ -27,7 +27,7 @@ export { groupFightsByEvent, isActivePicksFight } from "@/lib/data/fights-utils"
 async function getAllFightRelations(
   userId?: string
 ): Promise<FightWithRelations[]> {
-  if (hasSupabaseConfig()) {
+  if (usesLiveSupabase()) {
     const { fetchFightWithRelations } = await import(
       "@/lib/data/supabase-fetch"
     );
@@ -53,7 +53,7 @@ export async function getEventsForPicks(
   const fights = await getFightsForPicks(sportFilter, userId, "all");
   const eventIds = [...new Set(fights.map((f) => f.event_id))];
 
-  if (hasSupabaseConfig()) {
+  if (usesLiveSupabase()) {
     const { fetchAllEvents } = await import("@/lib/data/supabase-fetch");
     const allEvents = await fetchAllEvents();
     return allEvents
@@ -96,7 +96,7 @@ export async function savePrediction(input: {
     return { ok: false, error: validation.errors.join(" ") };
   }
 
-  if (hasSupabaseConfig()) {
+  if (usesLiveSupabase()) {
     const { createClient } = await import("@/lib/supabase/server");
     const supabase = await createClient();
     const {
@@ -162,7 +162,7 @@ export async function savePrediction(input: {
 }
 
 export async function getUserPredictions(userId: string): Promise<Prediction[]> {
-  if (hasSupabaseConfig()) {
+  if (usesLiveSupabase()) {
     const { fetchPredictionsForUser } = await import(
       "@/lib/data/supabase-fetch"
     );

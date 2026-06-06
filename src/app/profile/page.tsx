@@ -3,7 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { ProfilePageContent } from "@/components/profile/ProfilePageContent";
 import { getAuthUser } from "@/lib/auth/session";
-import { hasSupabaseConfig } from "@/lib/config";
+import { usesLiveSupabase } from "@/lib/config";
 import { getMockFightWithRelations, MOCK_USER_ID } from "@/data/mock";
 import { getUserPredictions } from "@/lib/data/fights";
 import {
@@ -13,7 +13,7 @@ import {
 import { fetchFightWithRelations } from "@/lib/data/supabase-fetch";
 
 export default async function ProfilePage() {
-  if (hasSupabaseConfig()) {
+  if (usesLiveSupabase()) {
     const user = await getAuthUser();
     if (!user) {
       return (
@@ -56,7 +56,7 @@ export default async function ProfilePage() {
 
     return (
       <AppShell showBrand={false} showTagline={false}>
-        <div className="mx-auto flex w-full max-w-3xl justify-end px-1">
+        <div className="pickfist-content mx-auto flex w-full max-w-lg justify-end px-1">
           <LogoutButton />
         </div>
         <ProfilePageContent
@@ -64,6 +64,7 @@ export default async function ProfilePage() {
           ranks={ranks}
           predictions={predictions}
           fights={fights}
+          isOwnProfile
         />
       </AppShell>
     );
@@ -94,7 +95,8 @@ export default async function ProfilePage() {
         ranks={ranks}
         predictions={predictions}
         fights={fights}
-        subtitle="PickFist demo (mock mode)"
+        subtitle="Local demo profile — picks persist across page refreshes (dev only)"
+        isOwnProfile
       />
     </AppShell>
   );

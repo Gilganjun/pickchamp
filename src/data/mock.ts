@@ -1,3 +1,8 @@
+import {
+  getAllDemoPredictions,
+  getDemoPredictionsForUser,
+  upsertDemoPrediction,
+} from "@/lib/mock/demoPredictionStore";
 import type {
   Event,
   Fight,
@@ -609,7 +614,10 @@ export const mockFights: Fight[] = [
 
 export const mockResults: FightResult[] = [];
 
-export let mockPredictions: Prediction[] = [];
+/** @deprecated Demo picks are stored via demoPredictionStore — use getMockPredictions(). */
+export function getMockPredictionsSnapshot(): Prediction[] {
+  return getAllDemoPredictions();
+}
 
 export function getMockEvents(): Event[] {
   return [...mockEvents];
@@ -624,8 +632,8 @@ export function getMockProfiles(): Profile[] {
 }
 
 export function getMockPredictions(userId?: string): Prediction[] {
-  if (!userId) return [...mockPredictions];
-  return mockPredictions.filter((p) => p.user_id === userId);
+  if (!userId) return getAllDemoPredictions();
+  return getDemoPredictionsForUser(userId);
 }
 
 export function getMockFightWithRelations(
@@ -647,35 +655,5 @@ export function upsertMockPrediction(
     id?: string;
   }
 ): Prediction {
-  const existing = mockPredictions.find(
-    (p) => p.user_id === pred.user_id && p.fight_id === pred.fight_id
-  );
-  const nowIso = new Date().toISOString();
-  if (existing) {
-    const updated: Prediction = {
-      ...existing,
-      ...pred,
-      updated_at: nowIso,
-    };
-    mockPredictions = mockPredictions.map((p) =>
-      p.id === existing.id ? updated : p
-    );
-    return updated;
-  }
-  const created: Prediction = {
-    ...pred,
-    id: pred.id ?? `pred-${Date.now()}`,
-    created_at: nowIso,
-    updated_at: nowIso,
-    locked_at: pred.locked_at ?? null,
-    graded_at: pred.graded_at ?? null,
-    rating_change: pred.rating_change ?? null,
-    main_correct: pred.main_correct ?? null,
-    method_correct: pred.method_correct ?? null,
-    round_correct: pred.round_correct ?? null,
-    perfect_pick: pred.perfect_pick ?? null,
-    grading_details: pred.grading_details ?? null,
-  };
-  mockPredictions.push(created);
-  return created;
+  return upsertDemoPrediction(pred);
 }

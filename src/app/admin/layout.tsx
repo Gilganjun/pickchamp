@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireAdminUser } from "@/lib/auth/admin";
-import { hasSupabaseConfig } from "@/lib/config";
+import { usesLiveSupabase } from "@/lib/config";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
@@ -9,7 +9,7 @@ export default async function AdminLayout({
 }: {
   children: ReactNode;
 }) {
-  if (hasSupabaseConfig()) {
+  if (usesLiveSupabase()) {
     const gate = await requireAdminUser();
     if (!gate.ok && gate.reason === "unauthenticated") {
       redirect("/login?next=/admin");

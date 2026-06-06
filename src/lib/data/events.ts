@@ -3,7 +3,7 @@ import {
   getMockFightWithRelations,
   getMockFights,
 } from "@/data/mock";
-import { hasSupabaseConfig } from "@/lib/config";
+import { usesLiveSupabase } from "@/lib/config";
 import {
   fetchAllEvents,
   fetchAllFights,
@@ -47,7 +47,7 @@ export async function getEventsWithMeta(): Promise<{
   upcoming: EventWithMeta[];
   settled: EventWithMeta[];
 }> {
-  if (hasSupabaseConfig()) {
+  if (usesLiveSupabase()) {
     const [events, fights] = await Promise.all([
       fetchAllEvents(),
       fetchAllFights(),
@@ -63,7 +63,7 @@ export async function getEventsWithMeta(): Promise<{
 export async function getEventDetail(
   eventId: string
 ): Promise<{ event: Event; fights: FightWithRelations[] } | null> {
-  if (hasSupabaseConfig()) {
+  if (usesLiveSupabase()) {
     const events = await fetchAllEvents();
     const event = events.find((e) => e.id === eventId);
     if (!event) return null;

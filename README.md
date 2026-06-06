@@ -41,7 +41,9 @@ npm run dev
 
 Use the **exact port** shown in the terminal (e.g. 3002 if 3000 is busy). Hard-refresh the browser (Ctrl+Shift+R).
 
-Without Supabase credentials, the app uses in-memory mock data so you can review the UI locally.
+**Local dev uses mock data by default** (demo user `fightfan42`) — no login needed for `/profile` or `/picks`, even if `.env.local` has Supabase keys. Set `PICKFIST_USE_SUPABASE=true` in `.env.local` when you want to test auth and live data locally.
+
+Without Supabase credentials at all, the same mock mode applies.
 
 **Production (`pickfist.com`) requires Supabase env vars** — otherwise picks are not persisted and accounts do not work.
 
@@ -102,6 +104,14 @@ Documentation for external review:
 
 - `docs/RATING_SYSTEM_IMPLEMENTATION.md`
 - `docs/CURSOR_BUILD_LOG.md` (includes migration section)
+
+## Display rank ladder (profile UI only)
+
+Users still have an **internal numeric rating** (e.g. 1000, 1042, 1100) used by V2 scoring and stored in the database. **Profile and sport cards show a separate 12-step display ladder** (Novice → All-Time Great) with progress within each band — this does **not** change how picks are scored.
+
+- Helper: `src/lib/profile/ratingTiers.ts`
+- Raw rating is de-emphasized in the UI (`Rating: 1042` secondary text)
+- Progress resets when crossing into the next display rank band
 
 ## Admin
 

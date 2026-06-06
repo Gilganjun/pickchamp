@@ -7,17 +7,27 @@ export interface RatingTierInfo {
   pointsToNextTier: number;
   progressPercent: number;
   isMaxTier: boolean;
+  /** Internal numeric rating (unchanged storage value). */
+  rawRating: number;
+  /** @deprecated Use rawRating — kept for existing callers. */
   rating: number;
   tierSpan: number;
 }
 
-const TIERS = [
-  { name: "ROOKIE", min: 0, max: 999 },
-  { name: "PROSPECT", min: 1000, max: 1099 },
-  { name: "CONTENDER", min: 1100, max: 1249 },
-  { name: "TITLE CHALLENGER", min: 1250, max: 1499 },
-  { name: "CHAMPION", min: 1500, max: 1799 },
-  { name: "HALL OF FAME", min: 1800, max: null as number | null },
+/** Display-only progression ladder. Does not affect V2 scoring math. */
+const DISPLAY_TIERS = [
+  { name: "NOVICE", min: 0, max: 999 },
+  { name: "ROOKIE", min: 1000, max: 1049 },
+  { name: "PROSPECT", min: 1050, max: 1099 },
+  { name: "CONTENDER", min: 1100, max: 1149 },
+  { name: "#1 CONTENDER", min: 1150, max: 1199 },
+  { name: "TITLE CHALLENGER", min: 1200, max: 1249 },
+  { name: "WORLD TITLE CHALLENGER", min: 1250, max: 1299 },
+  { name: "CHAMPION", min: 1300, max: 1399 },
+  { name: "UNIFIED CHAMPION", min: 1400, max: 1499 },
+  { name: "UNDISPUTED CHAMPION", min: 1500, max: 1649 },
+  { name: "HALL OF FAME", min: 1650, max: 1799 },
+  { name: "ALL-TIME GREAT", min: 1800, max: null as number | null },
 ] as const;
 
 export function normalizeRating(rating: number | null | undefined): number {
@@ -26,6 +36,7 @@ export function normalizeRating(rating: number | null | undefined): number {
 }
 
 export function formatTierDisplayName(tierName: string): string {
+  if (tierName.startsWith("#")) return tierName;
   return tierName
     .split(" ")
     .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
@@ -35,26 +46,28 @@ export function formatTierDisplayName(tierName: string): string {
 export function getRatingTier(
   ratingInput: number | null | undefined
 ): RatingTierInfo {
-  const rating = normalizeRating(ratingInput);
+  const rawRating = normalizeRating(ratingInput);
 
-  let tierIndex = TIERS.findIndex(
+  let tierIndex = DISPLAY_TIERS.findIndex(
     (tier) =>
       tier.max == null
-        ? rating >= tier.min
-        : rating >= tier.min && rating <= tier.max
+        ? rawRating >= tier.min
+        : rawRating >= tier.min && rawRating <= tier.max
   );
   if (tierIndex < 0) tierIndex = 0;
 
-  const current = TIERS[tierIndex];
+  const current = DISPLAY_TIERS[tierIndex];
   const isMaxTier = current.max == null;
-  const next = isMaxTier ? null : TIERS[tierIndex + 1];
+  const next = isMaxTier ? null : DISPLAY_TIERS[tierIndex + 1];
 
   const tierSpan = isMaxTier ? 1 : current.max! - current.min + 1;
-  const pointsIntoTier = isMaxTier ? 0 : rating - current.min;
-  const pointsToNextTier = isMaxTier ? 0 : next!.min - rating;
+  const pointsIntoTier = isMaxTier ? 0 : rawRating - current.min;
+  const pointsToNextTier = isMaxTier ? 0 : next!.min - rawRating;
   const progressPercent = isMaxTier
     ? 100
-    : Math.min(100, Math.round((pointsIntoTier / tierSpan) * 100));
+    : tierSpan > 0
+      ? Math.min(100, Math.round((pointsIntoTier / tierSpan) * 100))
+      : 0;
 
   return {
     currentTierName: current.name,
@@ -65,20 +78,46 @@ export function getRatingTier(
     pointsToNextTier,
     progressPercent,
     isMaxTier,
-    rating,
+    rawRating,
+    rating: rawRating,
     tierSpan,
   };
 }
 
 export function getPointsUntilNextLabel(tier: RatingTierInfo): string {
-  if (tier.isMaxTier) return "Maximum tier reached";
-  const next = formatTierDisplayName(tier.nextTierName!);
-  const pts = tier.pointsToNextTier;
-  return `${pts} point${pts === 1 ? "" : "s"} until ${next}`;
+  if (tier.isMaxTier) return "Maximum rank reached";
+  return `${tier.pointsToNextTier} pts to ${tier.nextTierName}`;
 }
 
 export function getTowardNextLabel(tier: RatingTierInfo): string {
-  if (tier.isMaxTier) return "Maximum tier reached";
-  const next = formatTierDisplayName(tier.nextTierName!);
-  return `${tier.pointsIntoTier} / ${tier.tierSpan} toward ${next}`;
+  if (tier.isMaxTier) return "Maximum rank reached";
+  return `${tier.pointsIntoTier} / ${tier.tierSpan} to ${tier.nextTierName}`;
 }
+
+export function getTierProgressPercentLabel(tier: RatingTierInfo): string {
+  if (tier.isMaxTier) return "Maximum rank reached";
+  return `${tier.progressPercent}% to ${tier.nextTierName}`;
+}
+
+export function getTierProgressFractionLabel(tier: RatingTierInfo): string {
+  if (tier.isMaxTier) return "Maximum rank reached";
+  return `${tier.pointsIntoTier} / ${tier.tierSpan} to ${tier.nextTierName}`;
+}
+
+/** User-facing PickFist Score within the current display rank band. */
+export function getPickFistScoreDisplay(tier: RatingTierInfo): string {
+  if (tier.isMaxTier) return "100 / 100";
+  return `${tier.pointsIntoTier} / ${tier.tierSpan}`;
+}
+
+export function getPointsToNextRankLabel(tier: RatingTierInfo): string {
+  if (tier.isMaxTier) return "Maximum rank reached";
+  return `${tier.pointsToNextTier} points to ${tier.nextTierName}`;
+}
+
+/** Threshold table for docs/tests — display ranks only. */
+export const DISPLAY_TIER_THRESHOLDS = DISPLAY_TIERS.map((tier) => ({
+  name: tier.name,
+  min: tier.min,
+  max: tier.max,
+}));

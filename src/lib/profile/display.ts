@@ -3,6 +3,7 @@ import {
   SPORT_RANK_ELIGIBILITY,
 } from "@/lib/rating/constants";
 import { getGradedCount } from "@/lib/rankings";
+import { getLockCountdown, inferFightTab, isFightLocked } from "@/lib/utils";
 import type {
   FightResult,
   FightWithRelations,
@@ -151,4 +152,114 @@ export function getRecentFormOutcomes(
 
 export function getGradedCountForTab(profile: Profile, tab: RankingTab): number {
   return getGradedCount(profile, tab);
+}
+
+export interface CurrentPickItem {
+  prediction: Prediction;
+  fight: FightWithRelations;
+}
+
+const INACTIVE_FIGHT_STATUSES = new Set([
+  "settled",
+  "cancelled",
+  "no_contest",
+]);
+
+export function isActiveCurrentPickFight(fight: FightWithRelations): boolean {
+  return !INACTIVE_FIGHT_STATUSES.has(fight.status);
+}
+
+/** Public profiles may only show picks after lock time has passed. */
+export function isCurrentPickPublicVisible(fight: FightWithRelations): boolean {
+  return isFightLocked(fight);
+}
+
+export function getCurrentPickLockLabel(fight: FightWithRelations): string {
+  const tab = inferFightTab(fight.status, fight.lock_time);
+  if (tab === "live") {
+    if (fight.status === "result_pending" || fight.status === "locked") {
+      return "Locked — awaiting result";
+    }
+    return "Live card";
+  }
+  const countdown = getLockCountdown(fight.lock_time);
+  if (countdown === "Locked") return "Locked — awaiting result";
+  return countdown;
+}
+
+function compareCurrentPicks(a: CurrentPickItem, b: CurrentPickItem): number {
+  const lockDiff =
+    new Date(a.fight.lock_time).getTime() -
+    new Date(b.fight.lock_time).getTime();
+  if (lockDiff !== 0) return lockDiff;
+  const eventDiff =
+    new Date(a.fight.event.event_date).getTime() -
+    new Date(b.fight.event.event_date).getTime();
+  if (eventDiff !== 0) return eventDiff;
+  const orderA = a.fight.fight_order ?? 999;
+  const orderB = b.fight.fight_order ?? 999;
+  return orderA - orderB;
+}
+
+export function getCurrentPickItems(
+  predictions: Prediction[],
+  fights: FightWithRelations[],
+  options: { isOwnProfile: boolean }
+): CurrentPickItem[] {
+  const fightById = new Map(fights.map((fight) => [fight.id, fight]));
+  const items: CurrentPickItem[] = [];
+
+  for (const prediction of predictions) {
+    if (prediction.graded_at != null) continue;
+    const fight = fightById.get(prediction.fight_id);
+    if (!fight || !isActiveCurrentPickFight(fight)) continue;
+    if (
+      !options.isOwnProfile &&
+      !isCurrentPickPublicVisible(fight)
+    ) {
+      continue;
+    }
+    items.push({ prediction, fight });
+  }
+
+  return items.sort(compareCurrentPicks);
+}
+
+export function hasHiddenOpenPicksOnPublicProfile(
+  predictions: Prediction[],
+  fights: FightWithRelations[]
+): boolean {
+  if (predictions.length === 0 || fights.length === 0) return false;
+  const fightById = new Map(fights.map((fight) => [fight.id, fight]));
+
+  for (const prediction of predictions) {
+    if (prediction.graded_at != null) continue;
+    const fight = fightById.get(prediction.fight_id);
+    if (!fight || !isActiveCurrentPickFight(fight)) continue;
+    if (!isCurrentPickPublicVisible(fight)) return true;
+  }
+  return false;
+}
+
+export function getRecentFormSummary(predictions: Prediction[], limit = 5) {
+  const outcomes = getRecentFormOutcomes(predictions, limit);
+  const wins = outcomes.filter((o) => o === "win").length;
+  const losses = outcomes.filter((o) => o === "loss").length;
+  return {
+    outcomes,
+    wins,
+    losses,
+    label:
+      outcomes.length > 0
+        ? `Last ${outcomes.length}: ${wins}–${losses}`
+        : null,
+  };
+}
+
+export function formatSportRecord(
+  correct: number,
+  incorrect: number,
+  accuracy: number
+): string {
+  return `${correct}–${incorrect} · ${accuracy}%`;
 }

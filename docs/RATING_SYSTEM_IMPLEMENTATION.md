@@ -204,4 +204,29 @@ User picks Usyk, Usyk wins → tier `even` → **+15** (not +60 from old 15% pop
 
 ---
 
+## 14. Display rank ladder (UI only — not scoring)
+
+**Separate from V2 pick tiers** (`tierRatings.ts` / `getEffectivePickTier`). Profile and rankings-style UI use `src/lib/profile/ratingTiers.ts` to map the stored **internal rating** to a 12-step fight-progression label:
+
+| Display rank | Internal rating |
+|--------------|-----------------|
+| NOVICE | 0–999 |
+| ROOKIE | 1000–1049 |
+| PROSPECT | 1050–1099 |
+| CONTENDER | 1100–1149 |
+| #1 CONTENDER | 1150–1199 |
+| TITLE CHALLENGER | 1200–1249 |
+| WORLD TITLE CHALLENGER | 1250–1299 |
+| CHAMPION | 1300–1399 |
+| UNIFIED CHAMPION | 1400–1499 |
+| UNDISPUTED CHAMPION | 1500–1649 |
+| HALL OF FAME | 1650–1799 |
+| ALL-TIME GREAT | 1800+ |
+
+- **Scoring math unchanged** — `calculateRatingChange`, DB columns, and grading are unaffected.
+- **UI de-emphasizes raw rating** — main identity is display rank + `% / pts to next rank`; raw value shown as secondary `Rating: 1042` only.
+- **Progress resets** when internal rating crosses into a new display band (e.g. 1099 → PROSPECT 98%, 1100 → CONTENDER 0%).
+
+---
+
 *End of V2 rating implementation reference.*

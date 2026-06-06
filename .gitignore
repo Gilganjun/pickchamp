@@ -17,6 +17,9 @@
 # production
 /build
 
+# local demo pick persistence (dev only)
+.mock-data/
+
 # misc
 .DS_Store
 *.pem

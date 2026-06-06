@@ -1,6 +1,8 @@
 "use server";
 
+import { MOCK_USER_ID } from "@/data/mock";
 import { getAuthUser } from "@/lib/auth/session";
+import { usesLiveSupabase } from "@/lib/config";
 import {
   getEventsForPicks,
   getFightsForPicks,
@@ -15,7 +17,8 @@ export async function loadPicksPageDataAction(
 ) {
   try {
     const user = await getAuthUser();
-    const userId = user?.id;
+    const demoMode = !usesLiveSupabase();
+    const userId = demoMode ? MOCK_USER_ID : user?.id;
 
     const [events, fights] = await Promise.all([
       getEventsForPicks(sport, userId),
@@ -27,7 +30,7 @@ export async function loadPicksPageDataAction(
       events,
       fights,
       userId: userId ?? null,
-      isLoggedIn: Boolean(userId),
+      isLoggedIn: demoMode || Boolean(userId),
     };
   } catch (error) {
     return {
@@ -51,13 +54,15 @@ export async function savePredictionAction(input: {
   sport: "boxing" | "mma";
   isLocked: boolean;
 }) {
-  const user = await getAuthUser();
-  if (!user) {
+  const demoMode = !usesLiveSupabase();
+  const user = demoMode ? null : await getAuthUser();
+  const userId = demoMode ? MOCK_USER_ID : user?.id;
+  if (!userId) {
     return { ok: false as const, error: "LOGIN_REQUIRED" };
   }
 
   return savePrediction({
-    userId: user.id,
+    userId,
     fightId: input.fightId,
     predictedOutcome: input.predictedOutcome,
     predictedMethod: input.predictedMethod,

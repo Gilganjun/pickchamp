@@ -1,14 +1,15 @@
 import { PicksClient } from "./PicksClient";
+import { MOCK_USER_ID } from "@/data/mock";
 import { getAuthUser } from "@/lib/auth/session";
-import { hasSupabaseConfig } from "@/lib/config";
+import { usesLiveSupabase } from "@/lib/config";
 import { getEventsForPicks, getFightsForPicks } from "@/lib/data/fights";
 
 export const dynamic = "force-dynamic";
 
 export default async function PicksPage() {
-  const useSupabase = hasSupabaseConfig();
+  const useSupabase = usesLiveSupabase();
   const user = useSupabase ? await getAuthUser() : null;
-  const userId = user?.id;
+  const userId = useSupabase ? user?.id : MOCK_USER_ID;
   const isLoggedIn = useSupabase ? Boolean(user) : true;
 
   try {
