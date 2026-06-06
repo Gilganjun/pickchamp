@@ -1,7 +1,3 @@
-import {
-  GLOBAL_RANK_ELIGIBILITY,
-  SPORT_RANK_ELIGIBILITY,
-} from "@/lib/rating/constants";
 import { getGradedCount } from "@/lib/rankings";
 import { getLockCountdown, inferFightTab, isFightLocked } from "@/lib/utils";
 import type {
@@ -34,14 +30,31 @@ export function getProgress(current: number, required: number) {
   };
 }
 
-export function getEligibilityThreshold(tab: RankingTab): number {
-  return tab === "global" ? GLOBAL_RANK_ELIGIBILITY : SPORT_RANK_ELIGIBILITY;
-}
+export { getEligibilityThreshold } from "@/lib/rankings";
 
 export function formatRankStatus(status: RankDisplay["status"]): string {
-  if (status === "inactive") return "Inactive";
-  if (status === "provisional") return "Unranked";
+  if (status === "inactive") return "Not Yet Qualified";
+  if (status === "provisional") return "Not Yet Qualified";
   return "Official Rank";
+}
+
+export function getQualificationProgressLabel(
+  current: number,
+  threshold: number
+): string {
+  return `${current} of ${threshold} qualifying picks completed`;
+}
+
+export function getQualificationRemainingLabel(remaining: number): string {
+  return `${remaining} qualifying pick${remaining === 1 ? "" : "s"} remaining`;
+}
+
+export function getGlobalQualificationSportHint(): string {
+  return "(Boxing and/or MMA)";
+}
+
+export function getSportQualificationHint(tab: "boxing" | "mma"): string {
+  return tab === "boxing" ? "(Boxing picks only)" : "(MMA picks only)";
 }
 
 export function getSportPickStats(profile: Profile, sport: "boxing" | "mma") {

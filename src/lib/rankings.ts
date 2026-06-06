@@ -1,8 +1,15 @@
 import {
+  BOXING_RANK_ELIGIBILITY,
   GLOBAL_RANK_ELIGIBILITY,
-  SPORT_RANK_ELIGIBILITY,
+  MMA_RANK_ELIGIBILITY,
 } from "@/lib/rating/constants";
 import type { Profile, RankDisplay, RankingTab } from "@/types";
+
+export function getEligibilityThreshold(tab: RankingTab): number {
+  if (tab === "global") return GLOBAL_RANK_ELIGIBILITY;
+  if (tab === "boxing") return BOXING_RANK_ELIGIBILITY;
+  return MMA_RANK_ELIGIBILITY;
+}
 
 export function getGradedCount(
   profile: Profile,
@@ -43,9 +50,7 @@ export function isEligibleForOfficialRank(
   tab: RankingTab
 ): boolean {
   const graded = getGradedCount(profile, tab);
-  const threshold =
-    tab === "global" ? GLOBAL_RANK_ELIGIBILITY : SPORT_RANK_ELIGIBILITY;
-  return graded >= threshold;
+  return graded >= getEligibilityThreshold(tab);
 }
 
 export function getRankDisplay(
@@ -54,8 +59,7 @@ export function getRankDisplay(
   officialRank?: number
 ): RankDisplay {
   const graded = getGradedCount(profile, tab);
-  const threshold =
-    tab === "global" ? GLOBAL_RANK_ELIGIBILITY : SPORT_RANK_ELIGIBILITY;
+  const threshold = getEligibilityThreshold(tab);
   const label =
     tab === "global"
       ? "Global Rank"
@@ -70,7 +74,7 @@ export function getRankDisplay(
     return {
       label,
       status: "provisional",
-      progress: `${graded} / ${threshold} picks completed`,
+      progress: `${graded} of ${threshold} qualifying picks completed`,
     };
   }
   return {

@@ -67,11 +67,11 @@ function makePrediction(fightId: string, gradedAt: string | null): Prediction {
 
 describe("getProgress", () => {
   it("computes percent and remaining picks", () => {
-    expect(getProgress(38, 50)).toEqual({
-      current: 38,
-      required: 50,
-      percent: 76,
-      remaining: 12,
+    expect(getProgress(7, 10)).toEqual({
+      current: 7,
+      required: 10,
+      percent: 70,
+      remaining: 3,
     });
   });
 });

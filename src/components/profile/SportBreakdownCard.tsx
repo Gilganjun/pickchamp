@@ -5,7 +5,10 @@ import {
   getEligibilityThreshold,
   getGradedCountForTab,
   getProgress,
+  getQualificationProgressLabel,
+  getQualificationRemainingLabel,
   getSportPickStats,
+  getSportQualificationHint,
 } from "@/lib/profile/display";
 import {
   formatTierDisplayName,
@@ -165,8 +168,11 @@ export function SportBreakdownCard({
 
       {rank.status === "provisional" && (
         <p className="mt-2 text-xs text-zinc-400">
-          Provisional · {progress.remaining} pick
-          {progress.remaining === 1 ? "" : "s"} to rank
+          Not Yet Qualified ·{" "}
+          {progress.remaining > 0
+            ? getQualificationRemainingLabel(progress.remaining)
+            : getQualificationProgressLabel(progress.current, threshold)}{" "}
+          {getSportQualificationHint(sport)}
         </p>
       )}
 

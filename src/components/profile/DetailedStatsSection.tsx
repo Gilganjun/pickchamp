@@ -1,7 +1,10 @@
 import {
+  formatRankStatus,
   getEligibilityThreshold,
+  getGlobalQualificationSportHint,
   getGradedCountForTab,
   getProgress,
+  getQualificationProgressLabel,
   getSportPickStats,
 } from "@/lib/profile/display";
 import type { Profile, RankDisplay } from "@/types";
@@ -41,8 +44,13 @@ export function DetailedStatsSection({
             Global Qualification
           </p>
           <p className="mt-1 text-zinc-300">
-            {globalProgress.current} / {globalThreshold} graded picks ·{" "}
-            {ranks.global.status}
+            {getQualificationProgressLabel(
+              globalProgress.current,
+              globalThreshold
+            )}
+          </p>
+          <p className="mt-0.5 text-zinc-500">
+            {getGlobalQualificationSportHint()} · {formatRankStatus(ranks.global.status)}
           </p>
         </div>
         <div>

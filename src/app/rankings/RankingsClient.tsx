@@ -5,6 +5,11 @@ import { AppShell } from "@/components/AppShell";
 import { RankingCard } from "@/components/RankingCard";
 import { TabBar } from "@/components/TabBar";
 import { loadLeaderboardAction } from "@/app/actions/rankings";
+import {
+  getEligibilityThreshold,
+  getGlobalQualificationSportHint,
+  getSportQualificationHint,
+} from "@/lib/profile/display";
 import type { RankingTab } from "@/types";
 
 const tabs: { id: RankingTab; label: string }[] = [
@@ -12,6 +17,14 @@ const tabs: { id: RankingTab; label: string }[] = [
   { id: "boxing", label: "Boxing" },
   { id: "mma", label: "MMA" },
 ];
+
+function qualificationDescription(tab: RankingTab): string {
+  const threshold = getEligibilityThreshold(tab);
+  if (tab === "global") {
+    return `Official global ranking requires ${threshold} graded qualifying picks ${getGlobalQualificationSportHint()}.`;
+  }
+  return `Official ${tab} ranking requires ${threshold} graded ${tab} picks ${getSportQualificationHint(tab)}.`;
+}
 
 export function RankingsClient() {
   const [tab, setTab] = useState<RankingTab>("global");
@@ -28,14 +41,10 @@ export function RankingsClient() {
     });
   }, [tab]);
 
-  const threshold = tab === "global" ? 50 : 25;
-
   return (
     <AppShell showTagline={false}>
       <h1 className="text-xl font-black uppercase tracking-tight">Rankings</h1>
-      <p className="mt-1 text-xs text-zinc-500">
-        Official ranking requires {threshold} graded picks in this category.
-      </p>
+      <p className="mt-1 text-xs text-zinc-500">{qualificationDescription(tab)}</p>
 
       <div className="mt-4">
         <TabBar tabs={tabs} value={tab} onChange={setTab} />
@@ -52,8 +61,8 @@ export function RankingsClient() {
           rows.map((row) => (
             <RankingCard
               key={row.profile.id}
-              rank={row.rank}
               profile={row.profile}
+              rank={row.rank}
               rating={row.rating}
               accuracy={row.accuracy}
               picks={row.picks}

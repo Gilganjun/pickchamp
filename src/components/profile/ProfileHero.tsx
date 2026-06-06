@@ -3,9 +3,12 @@ import { ProgressBar } from "@/components/profile/ProgressBar";
 import { RankGraphic } from "@/components/profile/RankGraphic";
 import {
   getEligibilityThreshold,
+  getGlobalQualificationSportHint,
   getGradedCountForTab,
   getPredictorTitle,
   getProgress,
+  getQualificationProgressLabel,
+  getQualificationRemainingLabel,
 } from "@/lib/profile/display";
 import { getTierIndex } from "@/lib/profile/rankGraphics";
 import {
@@ -13,7 +16,6 @@ import {
   getPointsToNextRankLabel,
   getRatingTier,
 } from "@/lib/profile/ratingTiers";
-import { cn } from "@/lib/utils";
 import type { Profile, RankDisplay } from "@/types";
 
 interface ProfileHeroProps {
@@ -25,15 +27,19 @@ interface ProfileHeroProps {
   perfectPicks: number;
 }
 
-function qualificationLine(
+function globalQualificationSecondaryLine(
   rank: RankDisplay,
+  current: number,
+  threshold: number,
   remaining: number
-): string | null {
-  if (rank.status === "official") return null;
+): string {
   if (rank.status === "inactive") {
-    return "Make your first pick to enter rankings";
+    return "Make your first qualifying pick";
   }
-  return `${remaining} pick${remaining === 1 ? "" : "s"} to enter rankings`;
+  if (remaining > 0) {
+    return getQualificationRemainingLabel(remaining);
+  }
+  return getQualificationProgressLabel(current, threshold);
 }
 
 export function ProfileHero({
@@ -52,7 +58,12 @@ export function ProfileHero({
   const graded = getGradedCountForTab(profile, "global");
   const qualification = getProgress(graded, threshold);
   const isOfficial = rank.status === "official";
-  const qualLine = qualificationLine(rank, qualification.remaining);
+  const qualSecondary = globalQualificationSecondaryLine(
+    rank,
+    qualification.current,
+    threshold,
+    qualification.remaining
+  );
   const tierIndex = getTierIndex(tier.currentTierName);
   const pickFistScore = getPickFistScoreDisplay(tier);
 
@@ -110,7 +121,7 @@ export function ProfileHero({
           )}
         </div>
 
-        <div className="min-w-[4.5rem] border-l border-[#2a2a2a] pl-2 text-center">
+        <div className="min-w-[4.75rem] border-l border-[#2a2a2a] pl-2 text-center">
           <p className="text-[8px] font-bold uppercase tracking-[0.12em] text-zinc-500">
             Global Rank
           </p>
@@ -125,19 +136,23 @@ export function ProfileHero({
             </>
           ) : (
             <>
-              <p
-                className={cn(
-                  "mt-0.5 font-black uppercase leading-none tracking-tight text-white",
-                  qualLine && qualLine.length > 22 ? "text-sm" : "text-base"
-                )}
-              >
-                Unranked
+              <p className="mt-0.5 text-xs font-black uppercase leading-tight tracking-tight text-white">
+                Not Yet Qualified
               </p>
-              {qualLine ? (
-                <p className="mt-1 text-[8px] leading-tight text-zinc-500">
-                  {qualLine}
+              <p className="mt-1 text-[8px] leading-tight text-zinc-400">
+                {qualSecondary}
+              </p>
+              {qualification.current > 0 && qualification.remaining > 0 ? (
+                <p className="mt-0.5 text-[7px] leading-tight text-zinc-500">
+                  {getQualificationProgressLabel(
+                    qualification.current,
+                    threshold
+                  )}
                 </p>
               ) : null}
+              <p className="mt-0.5 text-[7px] leading-tight text-zinc-500">
+                {getGlobalQualificationSportHint()}
+              </p>
             </>
           )}
         </div>

@@ -11,8 +11,9 @@ export const PERFECT_PICK_BONUS = 5;
 export const MAX_TOTAL_GAIN_PER_FIGHT = 75;
 export const MAX_TOTAL_LOSS_PER_FIGHT = -20;
 
-export const GLOBAL_RANK_ELIGIBILITY = 50;
-export const SPORT_RANK_ELIGIBILITY = 25;
+export const GLOBAL_RANK_ELIGIBILITY = 10;
+export const BOXING_RANK_ELIGIBILITY = 5;
+export const MMA_RANK_ELIGIBILITY = 5;
 
 export const FINISH_METHODS = [
   "ko_tko",
