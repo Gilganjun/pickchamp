@@ -71,7 +71,7 @@ export function RotatingSubheading({
   return (
     <div
       className={cn(
-        "relative mx-auto flex min-h-[2.75rem] w-full max-w-sm items-center justify-center overflow-hidden sm:min-h-[3rem]",
+        "relative mx-auto flex min-h-[1.5rem] w-full max-w-sm items-center justify-center overflow-hidden sm:min-h-[1.75rem]",
         className
       )}
     >

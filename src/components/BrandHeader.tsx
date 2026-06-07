@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PickFistLogo } from "@/components/PickFistLogo";
 import { RotatingSubheading } from "@/components/RotatingSubheading";
 import { cn } from "@/lib/utils";
 
@@ -39,7 +40,11 @@ export function BrandHeader({
       className={cn(
         "relative w-full",
         centered && "text-center",
-        compact ? "pt-4 pb-2" : prominent ? "pt-4 pb-2 sm:pt-5 sm:pb-3" : "pt-6 pb-3"
+        compact
+          ? "pt-3 pb-1"
+          : prominent
+            ? "pt-3 pb-0 sm:pt-4"
+            : "pt-5 pb-2"
       )}
     >
       {showProfileLink ? (
@@ -54,42 +59,24 @@ export function BrandHeader({
       <Link
         href="/picks"
         className={cn(
-          "inline-flex items-center gap-1.5",
+          "inline-flex items-center",
           centered && "justify-center",
           showProfileLink && "mx-auto"
         )}
+        aria-label="PickFist home"
       >
-        <span
-          className={cn(
-            "font-black tracking-tight text-white",
-            prominent ? "text-3xl" : compact ? "text-lg" : "text-xl"
-          )}
-        >
-          PICK
-        </span>
-        <span
-          className={cn(
-            "relative font-black tracking-tight text-red-500",
-            prominent ? "text-3xl" : compact ? "text-lg" : "text-xl"
-          )}
-        >
-          FIST
-          <span
-            className={cn(
-              "absolute left-1/2 -translate-x-1/2 text-red-500",
-              prominent ? "-top-2.5 text-[10px]" : "-top-2 text-[8px]"
-            )}
-          >
-            ♛
-          </span>
-        </span>
+        <PickFistLogo
+          size={prominent ? "lg" : compact ? "sm" : "md"}
+          priority={prominent}
+          className={showTagline ? "object-bottom" : undefined}
+        />
       </Link>
       {showTagline && (
         <RotatingSubheading
           className={cn(
             "text-zinc-400",
             centered && "mx-auto",
-            prominent ? "mt-1 text-xs sm:text-sm" : "mt-2 text-xs"
+            prominent ? "-mt-2.5 text-xs sm:-mt-3 sm:text-sm" : "mt-0.5 text-xs"
           )}
         />
       )}

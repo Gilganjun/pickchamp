@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { PickFistLogo } from "@/components/PickFistLogo";
 
 interface AuthCardProps {
   title: string;
@@ -13,9 +14,8 @@ export function AuthCard({ title, subtitle, children, footer }: AuthCardProps) {
     <div className="flex min-h-dvh items-center justify-center px-4 py-10">
       <div className="w-full max-w-md rounded-2xl border border-[#2a2a2a] bg-[#111111] p-6 shadow-lg">
         <div className="mb-6 text-center">
-          <Link href="/picks" className="text-2xl font-black tracking-tight">
-            <span className="text-white">PICK</span>
-            <span className="text-red-500">FIST</span>
+          <Link href="/picks" className="inline-flex justify-center" aria-label="PickFist home">
+            <PickFistLogo size="auth" priority />
           </Link>
           <h1 className="mt-4 text-xl font-bold text-white">{title}</h1>
           <p className="mt-2 text-sm text-zinc-500">{subtitle}</p>

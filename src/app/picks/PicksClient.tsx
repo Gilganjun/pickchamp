@@ -255,7 +255,7 @@ export function PicksClient({
 
   return (
     <AppShell prominentBrand showTagline showProfileLink>
-      <div className="mt-2">
+      <div className="mt-0.5">
         <PicksFilterBar
           sport={sport}
           card={eventCard}
