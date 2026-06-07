@@ -77,7 +77,7 @@ Copy `.env.example` to `.env.local`:
 
 Built-in mock content lives in `src/data/mock.ts`:
 
-- Events: **Steel City King** (Sheffield, 6 Jun 2026) and **UFC Fight Night: Muhammad vs. Bonfim** (Las Vegas, 6 Jun 2026)
+- Events: **Steel City King** (Sheffield, 6 Jun 2026), **UFC Fight Night: Muhammad vs. Bonfim** (Las Vegas, 6 Jun 2026), **Zuffa Boxing 7** (Bournemouth, 6 Jun 2026), **Fury vs. Hall** (Manchester, 13 Jun 2026), **Hawley vs. Steward** (York Hall, London, 13 Jun 2026), **Rodriguez vs. Vargas** (Glendale, 13 Jun 2026), **MVPW-04** (Orlando, 13 Jun 2026), **Gonzalez vs. Perez** (Grand Rapids, 14 Jun 2026), **Pugilist Revolution** (Long Beach, 19 Jun 2026), **Garner vs. Magnesi** (Southampton, 20 Jun 2026), **Quarless vs. McDonald** (Liverpool, 20 Jun 2026), **Bibby vs. Walsh** (Glasgow, 20 Jun 2026), **Davey vs. Thompson** (Batley, 20 Jun 2026), **Allen vs. Chvarkou** (Rotherham, 20 Jun 2026), **King of the West** (Phoenix, 20 Jun 2026), **Back II The Future** (Akron, 20 Jun 2026), **Kusamura vs. Kyohara** (Tokyo, 22 Jun 2026), **Crocker vs. Paro** (Brisbane, 24 Jun 2026), **Pascal vs. Lafreniere** (Laval, 27 Jun 2026), **Zachenhuber vs. Ajrulai** (Cologne, 27 Jun 2026), and **Zayas vs. Ennis** (Brooklyn, 27 Jun 2026)
 - Full bout lists with real calendar dates (no relative mock time offsets for cards)
 - Demo user: `fightfan42` (`MOCK_USER_ID`)
 
