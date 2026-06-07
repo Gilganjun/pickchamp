@@ -3,7 +3,9 @@ import { cn } from "@/lib/utils";
 
 export const LOCK_GRAPHIC_SRC = "/graphics/Lock.png";
 
-const NATIVE_SIZE = 1024;
+/** Intrinsic asset size (Graphics/Lock.png — display size set via VARIANT classes). */
+const NATIVE_WIDTH = 205;
+const NATIVE_HEIGHT = 205;
 
 const VARIANT = {
   /** Centered overlay on collapsed event cards */
@@ -30,8 +32,9 @@ export function LockGraphic({
     <Image
       src={LOCK_GRAPHIC_SRC}
       alt=""
-      width={NATIVE_SIZE}
-      height={NATIVE_SIZE}
+      width={NATIVE_WIDTH}
+      height={NATIVE_HEIGHT}
+      sizes={variant === "card" ? "5.5rem" : "4rem"}
       aria-hidden
       className={cn(
         "object-contain object-center",
