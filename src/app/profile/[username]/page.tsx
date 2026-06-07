@@ -1,14 +1,13 @@
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { ProfilePageContent } from "@/components/profile/ProfilePageContent";
-import { getMockFightWithRelations } from "@/data/mock";
-import { usesLiveSupabase } from "@/lib/config";
-import { getUserPredictions } from "@/lib/data/fights";
-import { fetchFightWithRelations } from "@/lib/data/supabase-fetch";
+import { getFightsForProfile, getUserPredictions } from "@/lib/data/fights";
 import {
   getProfileByUsername,
   getProfileRanks,
 } from "@/lib/data/profiles";
+
+export const dynamic = "force-dynamic";
 
 export default async function PublicProfilePage({
   params,
@@ -21,9 +20,7 @@ export default async function PublicProfilePage({
 
   const ranks = await getProfileRanks(profile);
   const predictions = await getUserPredictions(profile.id);
-  const fights = usesLiveSupabase()
-    ? await fetchFightWithRelations(profile.id)
-    : getMockFightWithRelations(profile.id);
+  const fights = await getFightsForProfile(profile.id);
 
   return (
     <AppShell showBrand={false} showTagline={false}>

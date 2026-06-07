@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { MOCK_USER_ID } from "@/data/mock";
 import { getAuthUser } from "@/lib/auth/session";
 import { usesLiveSupabase } from "@/lib/config";
@@ -61,7 +62,7 @@ export async function savePredictionAction(input: {
     return { ok: false as const, error: "LOGIN_REQUIRED" };
   }
 
-  return savePrediction({
+  const result = await savePrediction({
     userId,
     fightId: input.fightId,
     predictedOutcome: input.predictedOutcome,
@@ -71,4 +72,10 @@ export async function savePredictionAction(input: {
     sport: input.sport,
     isLocked: input.isLocked,
   });
+
+  if (result.ok) {
+    revalidatePath("/profile", "layout");
+  }
+
+  return result;
 }

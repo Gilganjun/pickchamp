@@ -1,11 +1,11 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
-  useTransition,
   type ReactNode,
 } from "react";
 import {
@@ -13,12 +13,14 @@ import {
   PickLockSection,
   RatingPointsGuide,
   RatingSwingButtonFooter,
+  type PickSaveStatus,
 } from "@/components/picks/PickRatingSwing";
 import {
   getPickFistLine,
   getPickPotential,
   getPotentialWinCeiling,
 } from "@/lib/rating/getPickPotential";
+import { LockGraphic } from "@/components/LockGraphic";
 import { PickImpactOverlay } from "@/components/picks/PickImpactOverlay";
 import {
   createPickImpactConfig,
@@ -46,12 +48,15 @@ import type {
   FightWithRelations,
   PredictedMethod,
   PredictedOutcome,
+  Prediction,
 } from "@/types";
 import { AdvancedPredictionPanel } from "./AdvancedPredictionPanel";
 
+const METHOD_ROUND_SAVE_DEBOUNCE_MS = 500;
+
 interface FightCardProps {
   fight: FightWithRelations;
-  onSaved?: () => void;
+  onPredictionSaved?: (fightId: string, prediction: Prediction) => void;
   /** Picks page only — glove impact on fighter pick buttons */
   enablePickImpact?: boolean;
   isLoggedIn?: boolean;
@@ -204,7 +209,7 @@ function PickChoiceButton({
 
 export function FightCard({
   fight,
-  onSaved,
+  onPredictionSaved,
   enablePickImpact = false,
   isLoggedIn = true,
 }: FightCardProps) {
@@ -212,6 +217,10 @@ export function FightCard({
   const locked = isFightLocked(fight);
   const settled = fight.status === "settled";
   const existing = fight.userPrediction;
+  const saveRequestRef = useRef(0);
+  const methodRoundDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
 
   const [outcome, setOutcome] = useState<PredictedOutcome | null>(
     existing?.predicted_outcome ?? null
@@ -226,7 +235,9 @@ export function FightCard({
     Boolean(existing?.predicted_method || existing?.predicted_round)
   );
   const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [saveStatus, setSaveStatus] = useState<PickSaveStatus>(
+    existing ? "saved" : "idle"
+  );
   const [impact, setImpact] = useState<PickImpactConfig | null>(null);
   const impactTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -238,19 +249,81 @@ export function FightCard({
   };
 
   useEffect(() => {
-    return () => clearPickImpactTimeouts();
+    return () => {
+      clearPickImpactTimeouts();
+      if (methodRoundDebounceRef.current) {
+        clearTimeout(methodRoundDebounceRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
     setOutcome(existing?.predicted_outcome ?? null);
     setMethod(existing?.predicted_method ?? null);
     setRound(existing?.predicted_round ?? null);
-  }, [
-    existing?.predicted_outcome,
-    existing?.predicted_method,
-    existing?.predicted_round,
-    fight.id,
-  ]);
+    if (existing) {
+      setSaveStatus("saved");
+      setError(null);
+    }
+  }, [existing, fight.id]);
+
+  const persistPick = useCallback(
+    async (
+      nextOutcome: PredictedOutcome,
+      nextMethod: PredictedMethod | null,
+      nextRound: number | null
+    ) => {
+      if (locked || settled) return;
+
+      if (!isLoggedIn) {
+        router.push("/login");
+        return;
+      }
+
+      const requestId = ++saveRequestRef.current;
+      const hadSavedPick = Boolean(existing);
+      setSaveStatus("saving");
+      setError(null);
+
+      const res = await savePredictionAction({
+        fightId: fight.id,
+        predictedOutcome: nextOutcome,
+        predictedMethod: nextMethod,
+        predictedRound: nextRound,
+        scheduledRounds: fight.scheduled_rounds,
+        sport: fight.sport,
+        isLocked: locked,
+      });
+
+      if (requestId !== saveRequestRef.current) return;
+
+      if (!res.ok) {
+        if (res.error === "LOGIN_REQUIRED") {
+          router.push("/login");
+          return;
+        }
+        setSaveStatus("error");
+        setError(res.error ?? "Failed to save pick");
+        return;
+      }
+
+      setSaveStatus(hadSavedPick ? "updated" : "saved");
+      if (res.prediction) {
+        onPredictionSaved?.(fight.id, res.prediction);
+      }
+    },
+    [
+      existing,
+      fight.id,
+      fight.scheduled_rounds,
+      fight.sport,
+      isLoggedIn,
+      locked,
+      onPredictionSaved,
+      router,
+      settled,
+    ]
+  );
 
   const firePickImpact = (side: PickImpactSide) => {
     if (!enablePickImpact) return;
@@ -274,8 +347,39 @@ export function FightCard({
   };
 
   const selectOutcome = (next: PredictedOutcome, side?: PickImpactSide) => {
+    if (locked || settled) return;
     if (side) firePickImpact(side);
     setOutcome(next);
+    void persistPick(next, method, round);
+  };
+
+  useEffect(() => {
+    if (locked || settled || !outcome) return;
+    if (!pickIsDirty(existing, outcome, method, round)) return;
+
+    const methodRoundDirty =
+      existing?.predicted_method !== method ||
+      existing?.predicted_round !== round;
+    if (!methodRoundDirty) return;
+
+    if (methodRoundDebounceRef.current) {
+      clearTimeout(methodRoundDebounceRef.current);
+    }
+
+    methodRoundDebounceRef.current = setTimeout(() => {
+      void persistPick(outcome, method, round);
+    }, METHOD_ROUND_SAVE_DEBOUNCE_MS);
+
+    return () => {
+      if (methodRoundDebounceRef.current) {
+        clearTimeout(methodRoundDebounceRef.current);
+      }
+    };
+  }, [method, round, outcome, existing, locked, settled, persistPick]);
+
+  const retrySave = () => {
+    if (!outcome) return;
+    void persistPick(outcome, method, round);
   };
 
   const sportColor = fight.sport === "boxing" ? "bg-red-600" : "bg-purple-600";
@@ -332,40 +436,9 @@ export function FightCard({
     });
   }, [outcome, method, round, favouriteContext, locked, settled]);
 
-  const handleSubmit = () => {
-    if (!outcome) {
-      setError("Select a fighter (or draw) first.");
-      return;
-    }
-    if (!isLoggedIn) {
-      router.push("/login");
-      return;
-    }
-    setError(null);
-    startTransition(async () => {
-      const res = await savePredictionAction({
-        fightId: fight.id,
-        predictedOutcome: outcome,
-        predictedMethod: method,
-        predictedRound: round,
-        scheduledRounds: fight.scheduled_rounds,
-        sport: fight.sport,
-        isLocked: locked,
-      });
-      if (!res.ok) {
-        if (res.error === "LOGIN_REQUIRED") {
-          router.push("/login");
-          return;
-        }
-        setError(res.error ?? "Failed to save pick");
-        return;
-      }
-      onSaved?.();
-    });
-  };
-
   return (
     <article
+      id={`fight-${fight.id}`}
       className={cn(
         "overflow-visible rounded-2xl border bg-[#111111] p-4 shadow-sm",
         sportBorder
@@ -448,8 +521,12 @@ export function FightCard({
           )}
         </div>
       ) : locked ? (
-        <div className="mt-4 rounded-xl border border-[#2a2a2a] bg-[#181818] p-3 text-center">
-          <p className="text-sm font-semibold text-zinc-300">Pick Locked</p>
+        <div className="mt-4 rounded-xl border border-amber-500/25 bg-[#181818] px-3 py-4 text-center">
+          <LockGraphic
+            variant="notice"
+            className="mx-auto drop-shadow-[0_0_14px_rgba(255,255,255,0.1)]"
+          />
+          <p className="mt-2 text-sm font-semibold text-zinc-300">Pick Locked</p>
           {existing && (
             <p className="mt-1 text-xs font-semibold text-zinc-300">
               Your pick:{" "}
@@ -505,7 +582,7 @@ export function FightCard({
               <PickChoiceButton
                 selected={outcome === "draw"}
                 variant="neutral"
-                onClick={() => setOutcome("draw")}
+                onClick={() => selectOutcome("draw")}
                 className={cn(
                   "flex w-full flex-col items-center gap-0.5 rounded-xl border-2 px-1 py-2.5 text-xs font-bold uppercase tracking-wide transition-colors",
                   outcome === "draw"
@@ -552,7 +629,6 @@ export function FightCard({
           <div className="mt-4 overflow-hidden rounded-xl border border-[#2a2a2a] bg-[#181818]">
             <PickLockSection
               hasSaved={Boolean(existing)}
-              dirty={pickIsDirty(existing, outcome, method, round)}
               savedLine={
                 existing
                   ? formatPickLine(
@@ -567,16 +643,10 @@ export function FightCard({
               method={method}
               round={round}
               potential={activePotential}
-              showDraft={
-                Boolean(
-                  outcome &&
-                    (!existing ||
-                      pickIsDirty(existing, outcome, method, round))
-                )
-              }
-              pending={pending}
-              disabled={pending || !outcome}
-              onSubmit={handleSubmit}
+              showDraft={Boolean(outcome)}
+              saveStatus={saveStatus}
+              saveError={error}
+              onRetrySave={retrySave}
             />
           </div>
 
@@ -606,12 +676,6 @@ export function FightCard({
               round={round}
             />
           </div>
-
-          {error && (
-            <p className="mt-2 text-xs text-red-400" role="alert">
-              {error}
-            </p>
-          )}
 
           <p className="mt-2 text-center text-[10px] text-zinc-500">
             You can change your pick until lock.

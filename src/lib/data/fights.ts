@@ -20,9 +20,31 @@ import {
   filterFightsForPicksView,
   type EventCardFilter,
 } from "@/lib/data/fights-utils";
+import {
+  appendPhantomPicksForDev,
+  getPhantomEventsForDev,
+  getPhantomPredictionsForDev,
+  upsertPhantomLocalPrediction,
+} from "@/lib/dev/phantomPicksDev";
 
 export type { EventCardFilter };
 export { groupFightsByEvent, isActivePicksFight } from "@/lib/data/fights-utils";
+
+function mergePhantomPredictions(
+  predictions: Prediction[],
+  userId: string
+): Prediction[] {
+  const phantom = getPhantomPredictionsForDev(userId);
+  if (phantom.length === 0) return predictions;
+
+  const byKey = new Map(
+    predictions.map((p) => [`${p.user_id}:${p.fight_id}`, p])
+  );
+  for (const p of phantom) {
+    byKey.set(`${p.user_id}:${p.fight_id}`, p);
+  }
+  return [...byKey.values()];
+}
 
 async function getAllFightRelations(
   userId?: string
@@ -31,9 +53,13 @@ async function getAllFightRelations(
     const { fetchFightWithRelations } = await import(
       "@/lib/data/supabase-fetch"
     );
-    return fetchFightWithRelations(userId);
+    const fights = await fetchFightWithRelations(userId);
+    return appendPhantomPicksForDev(fights, userId);
   }
-  return getMockFightWithRelations(userId ?? MOCK_USER_ID);
+  return appendPhantomPicksForDev(
+    getMockFightWithRelations(userId ?? MOCK_USER_ID),
+    userId
+  );
 }
 
 export async function getFightsForPicks(
@@ -43,6 +69,13 @@ export async function getFightsForPicks(
 ): Promise<FightWithRelations[]> {
   const fights = await getAllFightRelations(userId);
   return filterFightsForPicksView(fights, sportFilter, eventFilter);
+}
+
+/** All fights with relations for profile current-picks and hero stats. */
+export async function getFightsForProfile(
+  userId?: string
+): Promise<FightWithRelations[]> {
+  return getAllFightRelations(userId);
 }
 
 /** Events that have at least one active fight for the current sport filter */
@@ -56,20 +89,22 @@ export async function getEventsForPicks(
   if (usesLiveSupabase()) {
     const { fetchAllEvents } = await import("@/lib/data/supabase-fetch");
     const allEvents = await fetchAllEvents();
-    return allEvents
+    const filtered = allEvents
       .filter((e) => eventIds.includes(e.id))
       .sort(
         (a, b) =>
           new Date(a.event_date).getTime() - new Date(b.event_date).getTime()
       );
+    return getPhantomEventsForDev(filtered, fights);
   }
 
-  return getMockEvents()
+  const mockFiltered = getMockEvents()
     .filter((e) => eventIds.includes(e.id))
     .sort(
       (a, b) =>
         new Date(a.event_date).getTime() - new Date(b.event_date).getTime()
     );
+  return getPhantomEventsForDev(mockFiltered, fights);
 }
 
 export async function savePrediction(input: {
@@ -94,6 +129,25 @@ export async function savePrediction(input: {
 
   if (!validation.valid) {
     return { ok: false, error: validation.errors.join(" ") };
+  }
+
+  const phantomPrediction = upsertPhantomLocalPrediction({
+    user_id: input.userId,
+    fight_id: input.fightId,
+    predicted_outcome: input.predictedOutcome,
+    predicted_method: input.predictedMethod,
+    predicted_round: input.predictedRound,
+    locked_at: null,
+    graded_at: null,
+    rating_change: null,
+    main_correct: null,
+    method_correct: null,
+    round_correct: null,
+    perfect_pick: null,
+    grading_details: null,
+  });
+  if (phantomPrediction) {
+    return { ok: true, prediction: phantomPrediction };
   }
 
   if (usesLiveSupabase()) {
@@ -166,7 +220,10 @@ export async function getUserPredictions(userId: string): Promise<Prediction[]> 
     const { fetchPredictionsForUser } = await import(
       "@/lib/data/supabase-fetch"
     );
-    return fetchPredictionsForUser(userId);
+    return mergePhantomPredictions(
+      await fetchPredictionsForUser(userId),
+      userId
+    );
   }
-  return getMockPredictions(userId);
+  return mergePhantomPredictions(getMockPredictions(userId), userId);
 }

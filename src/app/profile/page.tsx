@@ -4,13 +4,14 @@ import { LogoutButton } from "@/components/auth/LogoutButton";
 import { ProfilePageContent } from "@/components/profile/ProfilePageContent";
 import { getAuthUser } from "@/lib/auth/session";
 import { usesLiveSupabase } from "@/lib/config";
-import { getMockFightWithRelations, MOCK_USER_ID } from "@/data/mock";
-import { getUserPredictions } from "@/lib/data/fights";
+import { MOCK_USER_ID } from "@/data/mock";
+import { getFightsForProfile, getUserPredictions } from "@/lib/data/fights";
 import {
   getCurrentUserProfile,
   getProfileRanks,
 } from "@/lib/data/profiles";
-import { fetchFightWithRelations } from "@/lib/data/supabase-fetch";
+
+export const dynamic = "force-dynamic";
 
 export default async function ProfilePage() {
   if (usesLiveSupabase()) {
@@ -52,7 +53,7 @@ export default async function ProfilePage() {
 
     const ranks = await getProfileRanks(profile);
     const predictions = await getUserPredictions(user.id);
-    const fights = await fetchFightWithRelations(user.id);
+    const fights = await getFightsForProfile(user.id);
 
     return (
       <AppShell showBrand={false} showTagline={false}>
@@ -86,7 +87,7 @@ export default async function ProfilePage() {
 
   const ranks = await getProfileRanks(profile);
   const predictions = await getUserPredictions(MOCK_USER_ID);
-  const fights = getMockFightWithRelations(MOCK_USER_ID);
+  const fights = await getFightsForProfile(MOCK_USER_ID);
 
   return (
     <AppShell showBrand={false} showTagline={false}>

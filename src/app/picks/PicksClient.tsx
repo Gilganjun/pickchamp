@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { FightCard } from "@/components/FightCard";
+import { LockGraphic } from "@/components/LockGraphic";
 import { cn } from "@/lib/utils";
 import {
   PicksFilterBar,
@@ -12,19 +13,25 @@ import {
 import { loadPicksPageDataAction } from "@/app/actions/picks";
 import {
   groupFightsByEvent,
+  isEventPicksLocked,
   orderEventCardGroups,
 } from "@/lib/data/fights-utils";
 import { formatEventDateTime } from "@/lib/datetime";
 import { inferFightTab } from "@/lib/utils";
-import type { Event, FightWithRelations, SportFilter as SF } from "@/types";
+import type {
+  Event,
+  FightWithRelations,
+  Prediction,
+  SportFilter as SF,
+} from "@/types";
 
 function PicksFightList({
   fights,
-  onSaved,
+  onPredictionSaved,
   isLoggedIn,
 }: {
   fights: FightWithRelations[];
-  onSaved: () => void;
+  onPredictionSaved: (fightId: string, prediction: Prediction) => void;
   isLoggedIn: boolean;
 }) {
   return (
@@ -33,7 +40,7 @@ function PicksFightList({
         <FightCard
           key={fight.id}
           fight={fight}
-          onSaved={onSaved}
+          onPredictionSaved={onPredictionSaved}
           enablePickImpact
           isLoggedIn={isLoggedIn}
         />
@@ -72,35 +79,61 @@ function CardCollapseChevron({ expanded }: { expanded: boolean }) {
 function EventCardSection({
   event,
   fights,
-  onSaved,
+  onPredictionSaved,
   isLoggedIn,
   defaultExpanded,
 }: {
   event: Event;
   fights: FightWithRelations[];
-  onSaved: () => void;
+  onPredictionSaved: (fightId: string, prediction: Prediction) => void;
   isLoggedIn: boolean;
   defaultExpanded: boolean;
 }) {
-  const [expanded, setExpanded] = useState(defaultExpanded);
-  const isLiveCard = fights.some(
-    (fight) => inferFightTab(fight.status, fight.lock_time) === "live"
+  const picksLocked = isEventPicksLocked(fights);
+  const [expanded, setExpanded] = useState(
+    defaultExpanded && !picksLocked
   );
+  const isLiveCard =
+    !picksLocked &&
+    fights.some(
+      (fight) => inferFightTab(fight.status, fight.lock_time) === "live"
+    );
+
+  useEffect(() => {
+    if (picksLocked) {
+      setExpanded(false);
+    }
+  }, [picksLocked]);
 
   return (
-    <section className="overflow-hidden rounded-xl border border-[#2a2a2a] bg-[#181818]">
+    <section className="relative overflow-hidden rounded-xl border border-[#2a2a2a] bg-[#181818]">
+      {picksLocked && !expanded ? (
+        <div
+          className="pointer-events-none absolute inset-0 z-[1] flex items-center justify-center"
+          aria-hidden
+        >
+          <LockGraphic
+            variant="card"
+            className="drop-shadow-[0_0_18px_rgba(255,255,255,0.12)]"
+          />
+        </div>
+      ) : null}
       <button
         type="button"
         onClick={() => setExpanded((open) => !open)}
         aria-expanded={expanded}
-        className="group flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-white/[0.02]"
+        className="relative z-[2] group flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-white/[0.02]"
       >
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-sm font-bold uppercase tracking-tight text-white">
               {event.name}
             </h2>
-            {isLiveCard ? (
+            {picksLocked ? (
+              <span className="inline-flex items-center rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300">
+                Picks Locked — Event Started
+              </span>
+            ) : isLiveCard ? (
               <span className="inline-flex items-center rounded-md bg-red-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
                 Live Card
               </span>
@@ -123,7 +156,7 @@ function EventCardSection({
         <div className="space-y-3 border-t border-[#2a2a2a] px-3 pb-3 pt-3">
           <PicksFightList
             fights={fights}
-            onSaved={onSaved}
+            onPredictionSaved={onPredictionSaved}
             isLoggedIn={isLoggedIn}
           />
         </div>
@@ -196,9 +229,28 @@ export function PicksClient({
     setSport(next);
   };
 
-  const groupedByCard = useMemo(
-    () => orderEventCardGroups(groupFightsByEvent(fights), eventCard),
-    [fights, eventCard]
+  const groupedByCard = useMemo(() => {
+    const groups = orderEventCardGroups(groupFightsByEvent(fights), eventCard);
+    const phantomIndex = groups.findIndex((group) =>
+      group.event.id.startsWith("phantom-local-")
+    );
+    if (phantomIndex <= 0) return groups;
+    const reordered = [...groups];
+    const [phantom] = reordered.splice(phantomIndex, 1);
+    return [phantom, ...reordered];
+  }, [fights, eventCard]);
+
+  const handlePredictionSaved = useCallback(
+    (fightId: string, prediction: Prediction) => {
+      setFights((current) =>
+        current.map((fight) =>
+          fight.id === fightId
+            ? { ...fight, userPrediction: prediction }
+            : fight
+        )
+      );
+    },
+    []
   );
 
   return (
@@ -233,10 +285,11 @@ export function PicksClient({
               key={`${event.id}-${eventCard}`}
               event={event}
               fights={cardFights}
-              onSaved={load}
+              onPredictionSaved={handlePredictionSaved}
               isLoggedIn={isLoggedIn}
               defaultExpanded={
-                eventCard === "all" || event.id === eventCard
+                (eventCard === "all" || event.id === eventCard) &&
+                !isEventPicksLocked(cardFights)
               }
             />
           ))

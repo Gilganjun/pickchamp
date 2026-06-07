@@ -435,74 +435,108 @@ function PickSectionHeader({
   );
 }
 
+export type PickSaveStatus = "idle" | "saving" | "saved" | "updated" | "error";
+
+function PickAutoSaveStatus({
+  status,
+  error,
+  onRetry,
+}: {
+  status: PickSaveStatus;
+  error: string | null;
+  onRetry?: () => void;
+}) {
+  if (status === "idle" && !error) return null;
+
+  if (status === "saving") {
+    return (
+      <p className="mt-4 text-center text-xs font-semibold text-zinc-400">
+        Saving…
+      </p>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <div className="mt-4 text-center">
+        <p className="text-xs font-semibold text-red-400">Couldn&apos;t save</p>
+        {error ? (
+          <p className="mt-1 text-[11px] text-red-300/90">{error}</p>
+        ) : null}
+        {onRetry ? (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="mt-2 text-[11px] font-semibold text-red-300 underline underline-offset-2 hover:text-red-200"
+          >
+            Tap to retry
+          </button>
+        ) : null}
+      </div>
+    );
+  }
+
+  const label = status === "updated" ? "Pick updated ✓" : "Saved ✓";
+
+  return (
+    <div className="mt-4 text-center">
+      <p className="text-xs font-semibold text-green-400">{label}</p>
+      <p className="mt-1 text-[11px] text-zinc-500">
+        You can change this pick until lock time.
+      </p>
+    </div>
+  );
+}
+
 export function PickLockSection({
   hasSaved,
-  dirty,
   savedLine,
   pickName,
   method,
   round,
   potential,
   showDraft,
-  pending,
-  disabled,
-  onSubmit,
+  saveStatus,
+  saveError,
+  onRetrySave,
 }: {
   hasSaved: boolean;
-  dirty: boolean;
   savedLine: string | null;
   pickName: string | null;
   method: PredictedMethod | null;
   round: number | null;
   potential: PickPotential | null;
   showDraft: boolean;
-  pending: boolean;
-  disabled: boolean;
-  onSubmit: () => void;
+  saveStatus: PickSaveStatus;
+  saveError: string | null;
+  onRetrySave?: () => void;
 }) {
   const methodHint = formatMethodRoundHint(method, round);
-  const showLockButton = showDraft || hasSaved;
-  const buttonLabel = pending
-    ? "Saving…"
-    : hasSaved
-      ? dirty
-        ? "Save updated pick"
-        : "Update my pick"
-      : "Lock my pick";
+  const showPick =
+    hasSaved || (showDraft && pickName) || saveStatus === "saving";
 
   return (
     <div className="px-4 py-4">
-      {hasSaved ? (
+      {showPick && pickName ? (
+        <>
+          <PickSectionHeader
+            label={hasSaved ? "Your current pick" : "Your pick"}
+            labelClassName={hasSaved ? "text-green-500" : "text-zinc-500"}
+            tierLabel={potential?.tierLabel}
+          />
+          <PickNameSwipe name={pickName} />
+          <p className="mt-2 text-[11px] text-zinc-400">{methodHint}</p>
+        </>
+      ) : hasSaved && savedLine ? (
         <>
           <PickSectionHeader
             label="Your current pick"
             labelClassName="text-green-500"
             tierLabel={potential?.tierLabel}
           />
-          {pickName ? (
-            <PickNameSwipe name={pickName} />
-          ) : (
-            <p className="mt-1 text-sm font-bold leading-snug text-white">
-              {savedLine}
-            </p>
-          )}
-          <p className="mt-2 text-[11px] text-zinc-400">{methodHint}</p>
-          {dirty && showDraft && savedLine ? (
-            <p className="mt-2 text-[11px] text-amber-400">
-              <span className="font-semibold uppercase tracking-wide">
-                Unsaved change
-              </span>
-            </p>
-          ) : null}
-        </>
-      ) : showDraft && pickName ? (
-        <>
-          <PickSectionHeader
-            label="Ready to lock"
-            labelClassName="text-zinc-500"
-            tierLabel={potential?.tierLabel}
-          />
-          <PickNameSwipe name={pickName} />
+          <p className="mt-1 text-sm font-bold leading-snug text-white">
+            {savedLine}
+          </p>
           <p className="mt-2 text-[11px] text-zinc-400">{methodHint}</p>
         </>
       ) : (
@@ -523,23 +557,11 @@ export function PickLockSection({
         round={round}
       />
 
-      {showLockButton ? (
-        <button
-          type="button"
-          onClick={onSubmit}
-          disabled={disabled}
-          className="mt-4 flex w-full flex-col items-center gap-0.5 rounded-xl bg-white px-4 py-3.5 text-black transition-opacity hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <span className="text-sm font-bold uppercase tracking-wide">
-            {buttonLabel}
-          </span>
-          {hasSaved && !dirty && !pending ? (
-            <span className="text-[10px] font-medium normal-case text-zinc-600">
-              Tap a fighter above to change, then save
-            </span>
-          ) : null}
-        </button>
-      ) : null}
+      <PickAutoSaveStatus
+        status={saveStatus}
+        error={saveError}
+        onRetry={onRetrySave}
+      />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import type { Event, FightWithRelations, SportFilter } from "@/types";
-import { inferFightTab } from "@/lib/utils";
+import { inferFightTab, isFightLocked } from "@/lib/utils";
 
 export type EventCardFilter = "all" | string;
 
@@ -7,6 +7,12 @@ export type EventCardFilter = "all" | string;
 export function isActivePicksFight(fight: FightWithRelations): boolean {
   const tab = inferFightTab(fight.status, fight.lock_time);
   return tab === "upcoming" || tab === "live";
+}
+
+/** Every fight on the card has passed pick lock — no new picks or edits. */
+export function isEventPicksLocked(fights: FightWithRelations[]): boolean {
+  if (fights.length === 0) return false;
+  return fights.every((fight) => isFightLocked(fight));
 }
 
 export function filterFightsForPicksView(
