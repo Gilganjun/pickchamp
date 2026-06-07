@@ -15,6 +15,7 @@ import type {
   PredictedOutcome,
   SportFilter,
 } from "@/types";
+import { ensureSettledFightsGraded } from "@/lib/grading/ensureSettledFightsGraded";
 import { validatePrediction } from "@/lib/rating/validatePrediction";
 import {
   filterFightsForPicksView,
@@ -216,6 +217,8 @@ export async function savePrediction(input: {
 }
 
 export async function getUserPredictions(userId: string): Promise<Prediction[]> {
+  await ensureSettledFightsGraded();
+
   if (usesLiveSupabase()) {
     const { fetchPredictionsForUser } = await import(
       "@/lib/data/supabase-fetch"

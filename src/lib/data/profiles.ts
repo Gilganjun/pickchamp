@@ -1,5 +1,6 @@
 import { getMockProfiles, MOCK_USER_ID } from "@/data/mock";
 import { usesLiveSupabase } from "@/lib/config";
+import { ensureSettledFightsGraded } from "@/lib/grading/ensureSettledFightsGraded";
 import {
   fetchAllProfiles,
   fetchProfileById,
@@ -35,8 +36,10 @@ export async function getCurrentUserProfile(
   const id = userId ?? MOCK_USER_ID;
   if (usesLiveSupabase()) {
     if (!userId) return null;
+    await ensureSettledFightsGraded();
     return fetchProfileById(userId);
   }
+  await ensureSettledFightsGraded();
   const profiles = await getAllProfiles();
   return profiles.find((p) => p.id === id) ?? null;
 }

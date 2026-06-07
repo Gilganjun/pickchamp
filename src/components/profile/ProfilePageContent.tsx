@@ -1,13 +1,11 @@
 import { CurrentPicksSection } from "@/components/profile/CurrentPicksSection";
 import { DetailedStatsSection } from "@/components/profile/DetailedStatsSection";
 import { ProfileHero } from "@/components/profile/ProfileHero";
-import { RecentForm } from "@/components/profile/RecentForm";
 import { RecentPredictionCard } from "@/components/profile/RecentPredictionCard";
 import { SportBreakdownCard } from "@/components/profile/SportBreakdownCard";
 import {
   getCurrentPickItems,
   getGlobalAccuracy,
-  getRecentFormSummary,
   hasHiddenOpenPicksOnPublicProfile,
 } from "@/lib/profile/display";
 import type { FightWithRelations, Prediction, Profile } from "@/types";
@@ -32,7 +30,6 @@ export function ProfilePageContent({
   showRecentPredictions = true,
 }: ProfilePageContentProps) {
   const accuracy = getGlobalAccuracy(profile);
-  const formSummary = getRecentFormSummary(predictions, 5);
   const currentPicks = getCurrentPickItems(predictions, fights, {
     isOwnProfile,
   });
@@ -68,33 +65,27 @@ export function ProfilePageContent({
         showHiddenMessage={showHiddenMessage}
       />
 
-      <div className="grid grid-cols-2 gap-2">
-        <RecentForm
-          outcomes={formSummary.outcomes}
-          summaryLabel={formSummary.label}
-        />
-        <section>
-          <h2 className="mb-2 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-            Sport Breakdown
-          </h2>
-          <div className="space-y-2">
-            <SportBreakdownCard
-              sport="boxing"
-              profile={profile}
-              rank={ranks.boxing}
-              rating={profile.boxing_rating}
-              compact
-            />
-            <SportBreakdownCard
-              sport="mma"
-              profile={profile}
-              rank={ranks.mma}
-              rating={profile.mma_rating}
-              compact
-            />
-          </div>
-        </section>
-      </div>
+      <section>
+        <h2 className="mb-2 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+          Sport Breakdown
+        </h2>
+        <div className="grid grid-cols-2 gap-2">
+          <SportBreakdownCard
+            sport="boxing"
+            profile={profile}
+            rank={ranks.boxing}
+            rating={profile.boxing_rating}
+            compact
+          />
+          <SportBreakdownCard
+            sport="mma"
+            profile={profile}
+            rank={ranks.mma}
+            rating={profile.mma_rating}
+            compact
+          />
+        </div>
+      </section>
 
       {showRecentPredictions && (
         <section>

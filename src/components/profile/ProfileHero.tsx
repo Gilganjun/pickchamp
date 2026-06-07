@@ -1,11 +1,13 @@
 import { ProfileQuickStats } from "@/components/profile/ProfileQuickStats";
 import { ProgressBar } from "@/components/profile/ProgressBar";
 import { RankGraphic } from "@/components/profile/RankGraphic";
+import { ProfileRecentFormStrip } from "@/components/profile/ProfileRecentFormStrip";
 import {
   formatPicksToQualifyLabel,
   getGlobalRankHeroState,
   getLockedPickCount,
   getPredictorTitle,
+  getRecentFormSummary,
 } from "@/lib/profile/display";
 import { getTierIndex } from "@/lib/profile/rankGraphics";
 import {
@@ -44,6 +46,7 @@ export function ProfileHero({
   const globalRankState = getGlobalRankHeroState(lockedPickCount, rank);
   const tierIndex = getTierIndex(tier.currentTierName);
   const pickFistScore = getPickFistScoreDisplay(tier);
+  const formSummary = getRecentFormSummary(predictions, 5);
 
   return (
     <section className="rounded-xl border border-[#2a2a2a] bg-gradient-to-br from-[#181818] to-[#111111] p-3">
@@ -55,6 +58,7 @@ export function ProfileHero({
           <p className="text-[10px] font-semibold text-[#d4a853]">
             {predictorTitle}
           </p>
+          <ProfileRecentFormStrip outcomes={formSummary.outcomes} />
         </div>
         <div className="relative shrink-0">
           <div
