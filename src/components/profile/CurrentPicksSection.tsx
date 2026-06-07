@@ -6,12 +6,28 @@ import { CurrentPickCard } from "@/components/profile/CurrentPickCard";
 import type { CurrentPickItem } from "@/lib/profile/display";
 import { cn } from "@/lib/utils";
 
-const INITIAL_VISIBLE = 6;
-
 interface CurrentPicksSectionProps {
   items: CurrentPickItem[];
   isOwnProfile: boolean;
   showHiddenMessage: boolean;
+}
+
+function DownArrowCue() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="current-picks-heading-arrow h-5 w-5 shrink-0 text-sky-400 sm:h-6 sm:w-6"
+      aria-hidden
+    >
+      <path d="M12 5v14" />
+      <path d="M6 13l6 6 6-6" />
+    </svg>
+  );
 }
 
 function CarouselArrow({
@@ -67,16 +83,12 @@ export function CurrentPicksSection({
   isOwnProfile,
   showHiddenMessage,
 }: CurrentPicksSectionProps) {
-  const [showAll, setShowAll] = useState(false);
   const [showArrows, setShowArrows] = useState(false);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const [hasOverflow, setHasOverflow] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const hideArrowsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const visible = showAll ? items : items.slice(0, INITIAL_VISIBLE);
-  const hasMore = items.length > INITIAL_VISIBLE;
 
   const updateScrollState = useCallback(() => {
     const el = scrollRef.current;
@@ -125,7 +137,7 @@ export function CurrentPicksSection({
       el.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", updateScrollState);
     };
-  }, [visible.length, updateScrollState]);
+  }, [items.length, updateScrollState]);
 
   useEffect(
     () => () => {
@@ -136,9 +148,14 @@ export function CurrentPicksSection({
 
   return (
     <section>
-      <h2 className="text-[10px] font-bold uppercase tracking-wider text-sky-400">
-        Current Picks
-      </h2>
+      <div className="flex items-center justify-center gap-2 sm:gap-3">
+        {items.length > 0 ? <DownArrowCue /> : null}
+        <h2 className="text-center font-[family-name:var(--font-teko)] text-xl font-bold uppercase tracking-wide text-white">
+          Current Picks{" "}
+          <span className="text-sky-400">= {items.length}</span>
+        </h2>
+        {items.length > 0 ? <DownArrowCue /> : null}
+      </div>
 
       {items.length === 0 ? (
         <div className="mt-2 rounded-xl border border-[#2a2a2a] bg-[#111111] p-4">
@@ -198,20 +215,11 @@ export function CurrentPicksSection({
               className="pickfist-horizontal-scroll flex gap-3 px-4 pb-1"
               aria-label="Current picks — swipe or use arrows to see more"
             >
-              {visible.map((item) => (
+              {items.map((item) => (
                 <CurrentPickCard key={item.prediction.id} item={item} />
               ))}
             </div>
           </div>
-          {hasMore && !showAll ? (
-            <button
-              type="button"
-              onClick={() => setShowAll(true)}
-              className="mt-2 w-full rounded-xl border border-[#2a2a2a] bg-[#111111] py-2 text-xs font-semibold uppercase tracking-wide text-zinc-400 transition-colors hover:border-zinc-600 hover:text-white"
-            >
-              Show all ({items.length})
-            </button>
-          ) : null}
         </>
       )}
     </section>

@@ -18,9 +18,12 @@ import { loadPicksPageDataAction } from "@/app/actions/picks";
 import {
   groupFightsByEvent,
   isEventPicksLocked,
+  isFocusedLockedCardSelection,
   orderEventCardGroups,
 } from "@/lib/data/fights-utils";
 import { CardExpandPointer } from "@/components/picks/CardExpandPointer";
+import { EventCardPickSummary } from "@/components/picks/EventCardPickSummary";
+import { summarizeEventCardPicks } from "@/lib/picks/eventCardPickSummary";
 import {
   dismissCardExpandHint,
   isCardExpandHintDismissed,
@@ -107,6 +110,10 @@ function EventCardSection({
   onExpandedChange?: (expanded: boolean) => void;
 }) {
   const picksLocked = isEventPicksLocked(fights);
+  const pickSummary = useMemo(
+    () => (picksLocked ? summarizeEventCardPicks(fights) : null),
+    [picksLocked, fights]
+  );
   const [expanded, setExpanded] = useState(false);
   const isLiveCard =
     !picksLocked &&
@@ -117,9 +124,8 @@ function EventCardSection({
   useEffect(() => {
     if (picksLocked) {
       setExpanded(false);
-      onExpandedChange?.(false);
     }
-  }, [picksLocked, onExpandedChange]);
+  }, [picksLocked]);
 
   const toggleExpanded = () => {
     setExpanded((open) => {
@@ -143,7 +149,10 @@ function EventCardSection({
     <EventCardShell
       event={event}
       overlay={
-        picksLocked && !expanded && !hideLockOverlay ? (
+        picksLocked &&
+        !expanded &&
+        !hideLockOverlay &&
+        (!pickSummary || pickSummary.picksMade === 0) ? (
           <div
             className="pointer-events-none absolute inset-0 z-[1] flex items-center justify-center"
             aria-hidden
@@ -173,8 +182,20 @@ function EventCardSection({
         />
       </button>
 
+      {pickSummary ? (
+        <div className="relative z-[2] border-t border-[#2a2a2a] px-3 py-3">
+          <EventCardPickSummary
+            summary={pickSummary}
+            variant={expanded ? "detailed" : "compact"}
+          />
+        </div>
+      ) : null}
+
       {expanded ? (
         <div className="relative z-[2] space-y-3 border-t border-[#2a2a2a] px-3 pb-3 pt-3">
+          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-500">
+            Full fight card
+          </p>
           <PicksFightList
             fights={fights}
             onPredictionSaved={onPredictionSaved}
@@ -301,7 +322,7 @@ export function PicksClient({
     setLoading(true);
     setError(null);
     try {
-      const data = await loadPicksPageDataAction(sport, "all");
+      const data = await loadPicksPageDataAction(sport, eventCard);
       if (!data.ok) {
         setError(data.error);
         setPickEvents([]);
@@ -366,6 +387,11 @@ export function PicksClient({
     return { activeGroups: active, lockedGroups: locked };
   }, [fights, eventCard]);
 
+  const focusedLockedCard = useMemo(
+    () => isFocusedLockedCardSelection(eventCard, fights),
+    [eventCard, fights]
+  );
+
   const allCardsCollapsed =
     activeExpandedIds.size === 0 &&
     pastInnerExpandedIds.size === 0 &&
@@ -388,13 +414,13 @@ export function PicksClient({
   ]);
 
   useEffect(() => {
-    setPastPicksExpanded(false);
     setActiveExpandedIds(new Set());
     setPastInnerExpandedIds(new Set());
-  }, [sport, eventCard]);
+    setPastPicksExpanded(focusedLockedCard);
+  }, [sport, eventCard, focusedLockedCard]);
 
   const pointerTarget = useMemo((): PointerTarget | null => {
-    if (hintDismissed) {
+    if (hintDismissed || focusedLockedCard) {
       return null;
     }
     if (activeGroups.length > 0 && activeExpandedIds.size === 0) {
@@ -413,6 +439,7 @@ export function PicksClient({
     return null;
   }, [
     hintDismissed,
+    focusedLockedCard,
     activeGroups,
     lockedGroups,
     activeExpandedIds,
@@ -423,6 +450,10 @@ export function PicksClient({
   const handleActiveExpanded = useCallback(
     (eventId: string, expanded: boolean) => {
       setActiveExpandedIds((current) => {
+        const has = current.has(eventId);
+        if ((expanded && has) || (!expanded && !has)) {
+          return current;
+        }
         const next = new Set(current);
         if (expanded) {
           next.add(eventId);
@@ -451,6 +482,10 @@ export function PicksClient({
   const handlePastInnerExpanded = useCallback(
     (eventId: string, expanded: boolean) => {
       setPastInnerExpandedIds((current) => {
+        const has = current.has(eventId);
+        if ((expanded && has) || (!expanded && !has)) {
+          return current;
+        }
         const next = new Set(current);
         if (expanded) {
           next.add(eventId);
@@ -507,6 +542,17 @@ export function PicksClient({
           </p>
         ) : (
           <>
+            {focusedLockedCard ? (
+              <PastPicksSection
+                groups={lockedGroups}
+                eventCard={eventCard}
+                onPredictionSaved={handlePredictionSaved}
+                isLoggedIn={isLoggedIn}
+                expanded={pastPicksExpanded}
+                onExpandedChange={handlePastPicksExpanded}
+                onInnerExpandedChange={handlePastInnerExpanded}
+              />
+            ) : null}
             {activeGroups.map(({ event, fights: cardFights }) => (
               <EventCardSection
                 key={`${event.id}-${eventCard}`}
@@ -523,21 +569,23 @@ export function PicksClient({
                 }
               />
             ))}
-            <PastPicksSection
-              groups={lockedGroups}
-              eventCard={eventCard}
-              onPredictionSaved={handlePredictionSaved}
-              isLoggedIn={isLoggedIn}
-              expanded={pastPicksExpanded}
-              onExpandedChange={handlePastPicksExpanded}
-              onInnerExpandedChange={handlePastInnerExpanded}
-              showExpandPointer={pointerTarget?.kind === "past-section"}
-              pointerTargetEventId={
-                pointerTarget?.kind === "past-inner"
-                  ? pointerTarget.eventId
-                  : null
-              }
-            />
+            {!focusedLockedCard ? (
+              <PastPicksSection
+                groups={lockedGroups}
+                eventCard={eventCard}
+                onPredictionSaved={handlePredictionSaved}
+                isLoggedIn={isLoggedIn}
+                expanded={pastPicksExpanded}
+                onExpandedChange={handlePastPicksExpanded}
+                onInnerExpandedChange={handlePastInnerExpanded}
+                showExpandPointer={pointerTarget?.kind === "past-section"}
+                pointerTargetEventId={
+                  pointerTarget?.kind === "past-inner"
+                    ? pointerTarget.eventId
+                    : null
+                }
+              />
+            ) : null}
           </>
         )}
       </div>

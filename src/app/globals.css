@@ -514,3 +514,27 @@ body {
     opacity: 0.85;
   }
 }
+
+@keyframes current-picks-heading-arrow {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(3px);
+  }
+}
+
+.current-picks-heading-arrow {
+  animation: current-picks-heading-arrow 1.4s ease-in-out infinite;
+  filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.35));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .current-picks-heading-arrow {
+    animation: none;
+    opacity: 0.7;
+  }
+}

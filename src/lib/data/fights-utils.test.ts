@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  isActivePicksFight,
   isEventPicksLocked,
+  isFocusedLockedCardSelection,
   orderEventCardGroups,
   type EventFightGroup,
 } from "./fights-utils";
@@ -54,6 +56,18 @@ function makeFight(
   };
 }
 
+describe("isActivePicksFight", () => {
+  it("includes settled fights so Past Picks cards remain visible", () => {
+    const settled = makeFight("f1", "2020-01-01T18:00:00Z", "settled");
+    expect(isActivePicksFight(settled)).toBe(true);
+  });
+
+  it("excludes cancelled and no-contest fights", () => {
+    const cancelled = makeFight("f1", "2020-01-01T18:00:00Z", "cancelled");
+    expect(isActivePicksFight(cancelled)).toBe(false);
+  });
+});
+
 describe("isEventPicksLocked", () => {
   const pastLock = "2020-01-01T18:00:00Z";
   const futureLock = "2099-06-10T18:00:00Z";
@@ -74,8 +88,35 @@ describe("isEventPicksLocked", () => {
     expect(isEventPicksLocked(fights)).toBe(true);
   });
 
+  it("returns true when every fight on the card is settled", () => {
+    const fights = [
+      makeFight("f1", pastLock, "settled"),
+      makeFight("f2", pastLock, "settled"),
+    ];
+    expect(isEventPicksLocked(fights)).toBe(true);
+  });
+
   it("returns false for an empty card", () => {
     expect(isEventPicksLocked([])).toBe(false);
+  });
+});
+
+describe("isFocusedLockedCardSelection", () => {
+  const pastLock = "2020-01-01T18:00:00Z";
+  const futureLock = "2099-06-10T18:00:00Z";
+
+  it("returns false for All Cards", () => {
+    expect(isFocusedLockedCardSelection("all", [])).toBe(false);
+  });
+
+  it("returns true when the filtered event is fully locked", () => {
+    const fights = [makeFight("f1", pastLock, "locked")];
+    expect(isFocusedLockedCardSelection("evt-1", fights)).toBe(true);
+  });
+
+  it("returns false when the filtered event still has open picks", () => {
+    const fights = [makeFight("f1", futureLock, "upcoming")];
+    expect(isFocusedLockedCardSelection("evt-1", fights)).toBe(false);
   });
 });
 
