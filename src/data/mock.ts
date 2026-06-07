@@ -290,6 +290,7 @@ export const mockEvents: Event[] = [
     location: "AO Arena, Manchester, UK",
     timezone: "Europe/London",
     event_date: MISFITS_FIRST_BELL,
+    card_tier: "featured",
     created_at: MOCK_DATA_CREATED,
     updated_at: MOCK_DATA_UPDATED,
   },
@@ -410,6 +411,7 @@ export const mockEvents: Event[] = [
     location: "Goodyear Local 18282 Hall, Akron, Ohio, USA",
     timezone: "America/New_York",
     event_date: AKRON_FIRST_BELL,
+    card_tier: "featured",
     created_at: MOCK_DATA_CREATED,
     updated_at: MOCK_DATA_UPDATED,
   },
@@ -426,6 +428,7 @@ export const mockEvents: Event[] = [
   {
     id: "evt-018",
     name: "Crocker vs. Paro",
+    card_tier: "title_fight",
     promotion: "No Limit Boxing",
     location: "Pat Rafter Arena, Tennyson, Australia",
     timezone: "Australia/Brisbane",

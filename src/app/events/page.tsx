@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
+import {
+  EventCardHeaderContent,
+  EventCardShell,
+} from "@/components/events/EventCardShell";
 import { getEventsWithMeta, type EventWithMeta } from "@/lib/data/events";
-import { formatEventDateTime } from "@/lib/datetime";
 
 export default async function EventsPage() {
   const { upcoming, settled } = await getEventsWithMeta();
@@ -39,20 +42,16 @@ export default async function EventsPage() {
 
 function EventCard({ event }: { event: EventWithMeta }) {
   return (
-    <Link
-      href={`/events/${event.id}`}
-      className="block rounded-xl border border-[#2a2a2a] bg-[#111111] p-4 hover:border-zinc-600"
-    >
-      <p className="font-bold">{event.name}</p>
-      <p className="mt-1 text-xs text-zinc-500">
-        {formatEventDateTime(event)}
-      </p>
-      {event.promotion && (
-        <p className="text-xs text-zinc-600">{event.promotion}</p>
-      )}
-      <p className="mt-2 text-xs text-zinc-400">
-        {event.fightCount} fights · {event.sports.join(", ").toUpperCase()}
-      </p>
-    </Link>
+    <EventCardShell event={event} surface="default" className="hover:border-zinc-600">
+      <Link
+        href={`/events/${event.id}`}
+        className="relative z-[2] block px-4 py-3 transition-colors hover:bg-white/[0.02]"
+      >
+        <EventCardHeaderContent
+          event={event}
+          fightLine={`${event.fightCount} fight${event.fightCount === 1 ? "" : "s"} · ${event.sports.join(", ").toUpperCase()}`}
+        />
+      </Link>
+    </EventCardShell>
   );
 }

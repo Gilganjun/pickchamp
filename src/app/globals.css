@@ -425,3 +425,92 @@ body {
     text-shadow: 0 0 8px var(--fighter-pick-glow);
   }
 }
+
+[data-event-card-style="classic"] .event-card-marketing-badge {
+  display: none;
+}
+
+/* Enhanced event card — dev-toggle only; default remains Classic */
+[data-event-card-style="enhanced"] .event-card-title {
+  font-family: var(--font-teko), var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 1.375rem;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+}
+
+[data-event-card-style="enhanced"] .event-card-shell::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--event-accent, #52525b);
+  border-radius: 0.75rem 0 0 0.75rem;
+  z-index: 3;
+  pointer-events: none;
+}
+
+[data-event-card-style="enhanced"] .event-card-shell[data-tier="featured"] {
+  --event-accent: #dc2626;
+}
+
+[data-event-card-style="enhanced"] .event-card-shell[data-tier="title_fight"] {
+  --event-accent: #d4a853;
+}
+
+[data-event-card-style="enhanced"] .event-card-shell[data-tier="hot"] {
+  --event-accent: #dc2626;
+}
+
+[data-event-card-style="enhanced"] .event-card-shell[data-tier="test"] {
+  --event-accent: #7c3aed;
+}
+
+[data-event-card-style="enhanced"] .event-card-marketing-badge {
+  color: var(--event-accent, #a1a1aa);
+}
+
+[data-event-card-style="enhanced"] .event-card-shell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    125deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    transparent 45%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes card-expand-pointer-pulse {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.card-expand-pointer-image {
+  animation: card-expand-pointer-pulse 1.1s ease-in-out infinite;
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.35));
+}
+
+.card-expand-pointer-label {
+  font-family: var(--font-teko), var(--font-geist-sans), system-ui, sans-serif;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.85);
+  animation: card-expand-pointer-pulse 1.1s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-expand-pointer-image,
+  .card-expand-pointer-label {
+    animation: none;
+    opacity: 0.85;
+  }
+}

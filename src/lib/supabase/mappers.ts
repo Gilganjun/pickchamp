@@ -31,7 +31,20 @@ export function mapProfile(row: Record<string, unknown>): Profile {
   };
 }
 
+const EVENT_CARD_TIERS = new Set([
+  "featured",
+  "title_fight",
+  "hot",
+  "test",
+]);
+
 export function mapEvent(row: Record<string, unknown>): Event {
+  const rawTier = row.card_tier;
+  const card_tier =
+    typeof rawTier === "string" && EVENT_CARD_TIERS.has(rawTier)
+      ? (rawTier as Event["card_tier"])
+      : null;
+
   return {
     id: String(row.id),
     name: String(row.name),
@@ -39,6 +52,7 @@ export function mapEvent(row: Record<string, unknown>): Event {
     location: (row.location as string | null) ?? null,
     timezone: (row.timezone as string | null) ?? null,
     event_date: String(row.event_date),
+    card_tier,
     created_at: String(row.created_at),
     updated_at: String(row.updated_at),
   };

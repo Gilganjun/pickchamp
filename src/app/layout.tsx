@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -11,6 +12,13 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+const teko = localFont({
+  src: "../fonts/teko/Teko-Bold.ttf",
+  variable: "--font-teko",
+  weight: "700",
+  display: "swap",
 });
 
 const siteTitle = "PickFist — Fight Prediction Rankings";
@@ -43,9 +51,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html
+      lang="en"
+      className="dark"
+      data-event-card-style="classic"
+      suppressHydrationWarning
+    >
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#070707] text-white`}
+        className={`${geistSans.variable} ${geistMono.variable} ${teko.variable} antialiased bg-[#070707] text-white`}
       >
         {children}
         <Analytics />

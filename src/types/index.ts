@@ -39,6 +39,9 @@ export type FavouriteSide = "fighterA" | "fighterB" | "none";
 
 export type FavouriteLevel = "heavy_favourite" | "favourite" | "even";
 
+/** Editorial marketing tier — optional, set manually in mock/seed data. */
+export type EventCardTier = "featured" | "title_fight" | "hot" | "test";
+
 export interface Profile {
   id: string;
   username: string;
@@ -69,6 +72,8 @@ export interface Event {
   /** IANA timezone for display (e.g. Europe/London). Overrides location inference. */
   timezone?: string | null;
   event_date: string;
+  /** Editorial badge for enhanced event cards (mock/seed only until DB column exists). */
+  card_tier?: EventCardTier | null;
   created_at: string;
   updated_at: string;
 }
