@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { Geist, Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
+import { EventCardStyleProvider } from "@/components/EventCardStyleProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -54,13 +55,13 @@ export default function RootLayout({
     <html
       lang="en"
       className="dark"
-      data-event-card-style="classic"
+      data-event-card-style="enhanced"
       suppressHydrationWarning
     >
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${teko.variable} antialiased bg-[#070707] text-white`}
       >
-        {children}
+        <EventCardStyleProvider>{children}</EventCardStyleProvider>
         <Analytics />
       </body>
     </html>
