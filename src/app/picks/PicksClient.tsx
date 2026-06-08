@@ -474,14 +474,12 @@ export function PicksClient({
 
   useEffect(() => {
     const onMigrated = () => {
-      if (isLoggedIn) {
-        void load();
-      }
+      void load();
     };
     window.addEventListener(GUEST_PICKS_MIGRATED_EVENT, onMigrated);
     return () =>
       window.removeEventListener(GUEST_PICKS_MIGRATED_EVENT, onMigrated);
-  }, [isLoggedIn, load]);
+  }, [load]);
 
   const handleSportChange = (next: SF) => {
     setSport(next);

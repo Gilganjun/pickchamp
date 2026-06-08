@@ -101,6 +101,7 @@ export async function migrateGuestPicksAction(drafts: GuestPickDraft[]) {
       locked: 0,
       missing: 0,
       failed: 0,
+      handledFightIds: [] as string[],
     };
   }
 
@@ -129,21 +130,25 @@ export async function migrateGuestPicksAction(drafts: GuestPickDraft[]) {
   let locked = 0;
   let missing = 0;
   let failed = 0;
+  const handledFightIds: string[] = [];
 
   for (const draft of drafts) {
     const fight = fightById.get(draft.fight_id);
     if (!fight) {
       missing += 1;
+      handledFightIds.push(draft.fight_id);
       continue;
     }
 
     if (isFightLocked(fight)) {
       locked += 1;
+      handledFightIds.push(draft.fight_id);
       continue;
     }
 
     if (existingByFightId.has(draft.fight_id)) {
       skipped += 1;
+      handledFightIds.push(draft.fight_id);
       continue;
     }
 
@@ -160,6 +165,7 @@ export async function migrateGuestPicksAction(drafts: GuestPickDraft[]) {
 
     if (result.ok) {
       migrated += 1;
+      handledFightIds.push(draft.fight_id);
       existingByFightId.set(draft.fight_id, {
         fight_id: draft.fight_id,
         updated_at: draft.updated_at,
@@ -174,5 +180,13 @@ export async function migrateGuestPicksAction(drafts: GuestPickDraft[]) {
     revalidatePath("/profile", "layout");
   }
 
-  return { ok: true as const, migrated, skipped, locked, missing, failed };
+  return {
+    ok: true as const,
+    migrated,
+    skipped,
+    locked,
+    missing,
+    failed,
+    handledFightIds,
+  };
 }

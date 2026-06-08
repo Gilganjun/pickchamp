@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { usesLiveSupabase } from "@/lib/config";
 import {
   getGuestPickCount,
@@ -13,6 +14,7 @@ const HIDDEN_PATH_PREFIXES = ["/login", "/signup", "/auth"];
 
 export function GuestPickBanner() {
   const pathname = usePathname();
+  const { isLoggedIn, ready } = useSupabaseAuth();
   const [count, setCount] = useState(0);
 
   useEffect(() => {
@@ -25,7 +27,7 @@ export function GuestPickBanner() {
     return () => window.removeEventListener(GUEST_PICKS_CHANGED_EVENT, refresh);
   }, []);
 
-  if (!usesLiveSupabase() || count === 0) {
+  if (!usesLiveSupabase() || !ready || isLoggedIn || count === 0) {
     return null;
   }
 
