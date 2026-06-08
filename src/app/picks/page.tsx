@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { PicksClient } from "./PicksClient";
 import { MOCK_USER_ID } from "@/data/mock";
 import { getAuthUser } from "@/lib/auth/session";
@@ -19,11 +20,21 @@ export default async function PicksPage() {
     ]);
 
     return (
-      <PicksClient
-        initialIsLoggedIn={isLoggedIn}
-        initialEvents={events}
-        initialFights={fights}
-      />
+      <Suspense
+        fallback={
+          <PicksClient
+            initialIsLoggedIn={isLoggedIn}
+            initialEvents={events}
+            initialFights={fights}
+          />
+        }
+      >
+        <PicksClient
+          initialIsLoggedIn={isLoggedIn}
+          initialEvents={events}
+          initialFights={fights}
+        />
+      </Suspense>
     );
   } catch (error) {
     const message =
@@ -33,12 +44,23 @@ export default async function PicksPage() {
           ? String((error as { message: unknown }).message)
           : "Failed to load fights.";
     return (
-      <PicksClient
-        initialIsLoggedIn={isLoggedIn}
-        initialEvents={[]}
-        initialFights={[]}
-        initialError={message}
-      />
+      <Suspense
+        fallback={
+          <PicksClient
+            initialIsLoggedIn={isLoggedIn}
+            initialEvents={[]}
+            initialFights={[]}
+            initialError={message}
+          />
+        }
+      >
+        <PicksClient
+          initialIsLoggedIn={isLoggedIn}
+          initialEvents={[]}
+          initialFights={[]}
+          initialError={message}
+        />
+      </Suspense>
     );
   }
 }

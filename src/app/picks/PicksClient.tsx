@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { FightCard } from "@/components/FightCard";
 import {
@@ -28,6 +29,7 @@ import {
   dismissCardExpandHint,
   isCardExpandHintDismissed,
 } from "@/lib/ui/cardExpandHint";
+import { CHANGE_PICK_QUERY_KEY } from "@/lib/picks/changePickRoute";
 import { inferFightTab } from "@/lib/utils";
 import type {
   Event,
@@ -100,6 +102,9 @@ function EventCardSection({
   hideLockOverlay = false,
   showExpandPointer = false,
   onExpandedChange,
+  startExpanded = false,
+  scrollToFightId = null,
+  onFocusFightHandled,
 }: {
   event: Event;
   fights: FightWithRelations[];
@@ -108,13 +113,16 @@ function EventCardSection({
   hideLockOverlay?: boolean;
   showExpandPointer?: boolean;
   onExpandedChange?: (expanded: boolean) => void;
+  startExpanded?: boolean;
+  scrollToFightId?: string | null;
+  onFocusFightHandled?: () => void;
 }) {
   const picksLocked = isEventPicksLocked(fights);
   const pickSummary = useMemo(
     () => (picksLocked ? summarizeEventCardPicks(fights) : null),
     [picksLocked, fights]
   );
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(startExpanded);
   const isLiveCard =
     !picksLocked &&
     fights.some(
@@ -126,6 +134,24 @@ function EventCardSection({
       setExpanded(false);
     }
   }, [picksLocked]);
+
+  useEffect(() => {
+    if (!startExpanded) return;
+    setExpanded(true);
+    onExpandedChange?.(true);
+  }, [startExpanded, onExpandedChange]);
+
+  useEffect(() => {
+    if (!expanded || !scrollToFightId) return;
+    const timer = window.setTimeout(() => {
+      document.getElementById(`fight-${scrollToFightId}`)?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+      onFocusFightHandled?.();
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [expanded, scrollToFightId, onFocusFightHandled]);
 
   const toggleExpanded = () => {
     setExpanded((open) => {
@@ -219,6 +245,9 @@ function PastPicksSection({
   onInnerExpandedChange,
   showExpandPointer = false,
   pointerTargetEventId = null,
+  innerStartExpandedIds,
+  focusFightId = null,
+  onFocusFightHandled,
 }: {
   groups: EventFightGroup[];
   eventCard: CardFilterValue;
@@ -229,6 +258,9 @@ function PastPicksSection({
   onInnerExpandedChange: (eventId: string, expanded: boolean) => void;
   showExpandPointer?: boolean;
   pointerTargetEventId?: string | null;
+  innerStartExpandedIds?: Set<string>;
+  focusFightId?: string | null;
+  onFocusFightHandled?: () => void;
 }) {
   if (groups.length === 0) {
     return null;
@@ -269,6 +301,14 @@ function PastPicksSection({
               showExpandPointer={
                 pointerTargetEventId === event.id && expanded
               }
+              startExpanded={innerStartExpandedIds?.has(event.id) ?? false}
+              scrollToFightId={
+                focusFightId &&
+                cardFights.some((fight) => fight.id === focusFightId)
+                  ? focusFightId
+                  : null
+              }
+              onFocusFightHandled={onFocusFightHandled}
               onExpandedChange={(next) =>
                 onInnerExpandedChange(event.id, next)
               }
@@ -293,6 +333,11 @@ export function PicksClient({
   initialFights = [],
   initialError = null,
 }: PicksClientProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [focusFightId, setFocusFightId] = useState<string | null>(null);
+  const focusHandledRef = useRef(false);
+
   const [sport, setSport] = useState<SF>("all");
   const [eventCard, setEventCard] = useState<CardFilterValue>("all");
   const [pickEvents, setPickEvents] = useState<Event[]>(initialEvents);
@@ -312,6 +357,32 @@ export function PicksClient({
   useEffect(() => {
     setHintDismissed(isCardExpandHintDismissed("picks"));
   }, []);
+
+  useEffect(() => {
+    const fightId = searchParams.get(CHANGE_PICK_QUERY_KEY);
+    if (fightId) {
+      setFocusFightId(fightId);
+      focusHandledRef.current = false;
+    }
+  }, [searchParams]);
+
+  const focusTarget = useMemo(() => {
+    if (!focusFightId) return null;
+    const fight = fights.find((entry) => entry.id === focusFightId);
+    if (!fight) return null;
+    return {
+      fightId: fight.id,
+      eventId: fight.event_id,
+      sport: fight.sport as SF,
+    };
+  }, [focusFightId, fights]);
+
+  const handleFocusFightHandled = useCallback(() => {
+    if (focusHandledRef.current) return;
+    focusHandledRef.current = true;
+    setFocusFightId(null);
+    router.replace("/picks", { scroll: false });
+  }, [router]);
 
   const dismissExpandHint = useCallback(() => {
     dismissCardExpandHint("picks");
@@ -387,6 +458,33 @@ export function PicksClient({
     return { activeGroups: active, lockedGroups: locked };
   }, [fights, eventCard]);
 
+  useEffect(() => {
+    if (!focusTarget || focusHandledRef.current) return;
+
+    if (sport !== focusTarget.sport) {
+      setSport(focusTarget.sport);
+      return;
+    }
+    if (eventCard !== focusTarget.eventId) {
+      setEventCard(focusTarget.eventId);
+      return;
+    }
+
+    const inActive = activeGroups.some(
+      (group) => group.event.id === focusTarget.eventId
+    );
+    const inLocked = lockedGroups.some(
+      (group) => group.event.id === focusTarget.eventId
+    );
+
+    if (inLocked) {
+      setPastPicksExpanded(true);
+      setPastInnerExpandedIds(new Set([focusTarget.eventId]));
+    } else if (inActive) {
+      setActiveExpandedIds(new Set([focusTarget.eventId]));
+    }
+  }, [focusTarget, sport, eventCard, activeGroups, lockedGroups]);
+
   const focusedLockedCard = useMemo(
     () => isFocusedLockedCardSelection(eventCard, fights),
     [eventCard, fights]
@@ -414,10 +512,11 @@ export function PicksClient({
   ]);
 
   useEffect(() => {
+    if (focusFightId) return;
     setActiveExpandedIds(new Set());
     setPastInnerExpandedIds(new Set());
     setPastPicksExpanded(focusedLockedCard);
-  }, [sport, eventCard, focusedLockedCard]);
+  }, [sport, eventCard, focusedLockedCard, focusFightId]);
 
   const pointerTarget = useMemo((): PointerTarget | null => {
     if (hintDismissed || focusedLockedCard) {
@@ -551,6 +650,9 @@ export function PicksClient({
                 expanded={pastPicksExpanded}
                 onExpandedChange={handlePastPicksExpanded}
                 onInnerExpandedChange={handlePastInnerExpanded}
+                innerStartExpandedIds={pastInnerExpandedIds}
+                focusFightId={focusFightId}
+                onFocusFightHandled={handleFocusFightHandled}
               />
             ) : null}
             {activeGroups.map(({ event, fights: cardFights }) => (
@@ -564,6 +666,11 @@ export function PicksClient({
                   pointerTarget?.kind === "active" &&
                   pointerTarget.eventId === event.id
                 }
+                startExpanded={activeExpandedIds.has(event.id)}
+                scrollToFightId={
+                  focusTarget?.eventId === event.id ? focusTarget.fightId : null
+                }
+                onFocusFightHandled={handleFocusFightHandled}
                 onExpandedChange={(expanded) =>
                   handleActiveExpanded(event.id, expanded)
                 }
@@ -578,6 +685,9 @@ export function PicksClient({
                 expanded={pastPicksExpanded}
                 onExpandedChange={handlePastPicksExpanded}
                 onInnerExpandedChange={handlePastInnerExpanded}
+                innerStartExpandedIds={pastInnerExpandedIds}
+                focusFightId={focusFightId}
+                onFocusFightHandled={handleFocusFightHandled}
                 showExpandPointer={pointerTarget?.kind === "past-section"}
                 pointerTargetEventId={
                   pointerTarget?.kind === "past-inner"

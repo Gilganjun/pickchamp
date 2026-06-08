@@ -360,7 +360,11 @@ export function CurrentPicksSection({
               aria-label="Current picks — swipe or use arrows to see more"
             >
               {items.map((item) => (
-                <CurrentPickCard key={item.prediction.id} item={item} />
+                <CurrentPickCard
+                  key={item.prediction.id}
+                  item={item}
+                  showChangePick={isOwnProfile}
+                />
               ))}
             </div>
           </div>

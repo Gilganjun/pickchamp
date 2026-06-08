@@ -2,7 +2,7 @@ import { CurrentPicksSection } from "@/components/profile/CurrentPicksSection";
 import { DetailedStatsSection } from "@/components/profile/DetailedStatsSection";
 import { ProfileHero } from "@/components/profile/ProfileHero";
 import { RecentPredictionCard } from "@/components/profile/RecentPredictionCard";
-import { SportBreakdownCard } from "@/components/profile/SportBreakdownCard";
+import { SportRankingsSection } from "@/components/profile/SportRankingsSection";
 import {
   getCurrentPickItems,
   getGlobalAccuracy,
@@ -62,31 +62,12 @@ export function ProfilePageContent({
         showHiddenMessage={showHiddenMessage}
       />
 
-      <section>
-        <h2 className="mb-2.5 text-[11px] font-bold uppercase tracking-wider text-zinc-400">
-          Sport Rankings
-        </h2>
-        <div className="grid grid-cols-2 gap-2">
-          <SportBreakdownCard
-            sport="boxing"
-            profile={profile}
-            rank={ranks.boxing}
-            rating={profile.boxing_rating}
-            predictions={predictions}
-            fights={fights}
-            compact
-          />
-          <SportBreakdownCard
-            sport="mma"
-            profile={profile}
-            rank={ranks.mma}
-            rating={profile.mma_rating}
-            predictions={predictions}
-            fights={fights}
-            compact
-          />
-        </div>
-      </section>
+      <SportRankingsSection
+        profile={profile}
+        ranks={ranks}
+        predictions={predictions}
+        fights={fights}
+      />
 
       {showRecentPredictions && (
         <section>

@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { SportBadge } from "@/components/profile/SportBadge";
+import { getChangePickHref } from "@/lib/picks/changePickRoute";
 import {
   getCurrentPickLockLabel,
   methodLabel,
@@ -13,6 +15,7 @@ import type { PredictedOutcome } from "@/types";
 
 interface CurrentPickCardProps {
   item: CurrentPickItem;
+  showChangePick?: boolean;
 }
 
 function getPredictedWinnerName(
@@ -33,7 +36,10 @@ function getPredictedMethodSubtitle(
   return round != null ? `${base} · R${round}` : base;
 }
 
-export function CurrentPickCard({ item }: CurrentPickCardProps) {
+export function CurrentPickCard({
+  item,
+  showChangePick = false,
+}: CurrentPickCardProps) {
   const { prediction, fight } = item;
   const winnerName = getPredictedWinnerName(
     fight,
@@ -103,15 +109,27 @@ export function CurrentPickCard({ item }: CurrentPickCardProps) {
         ) : null}
       </div>
 
-      <div className="mt-3 border-t border-[#2a2a2a] pt-2">
-        <p className="text-[8px] font-bold uppercase tracking-wider text-zinc-500">
-          If Pick Wins / Loses
-        </p>
-        <p className="mt-1 text-sm font-black tabular-nums">
-          <span className="text-green-500">{winSwing}</span>
-          <span className="text-zinc-600"> / </span>
-          <span className="text-red-500">{loseSwing}</span>
-        </p>
+      <div className="mt-3 flex items-end justify-between gap-2 border-t border-[#2a2a2a] pt-2">
+        {showChangePick ? (
+          <Link
+            href={getChangePickHref(fight.id)}
+            className="shrink-0 rounded-md border border-sky-500/40 bg-sky-500/10 px-2 py-1 text-[9px] font-bold uppercase tracking-wide text-sky-300 transition-colors hover:border-sky-400/60 hover:bg-sky-500/20 hover:text-sky-200"
+          >
+            Change Pick
+          </Link>
+        ) : (
+          <span className="shrink-0" aria-hidden />
+        )}
+        <div className="min-w-0 text-right">
+          <p className="text-[8px] font-bold uppercase tracking-wider text-zinc-500">
+            If Pick Wins / Loses
+          </p>
+          <p className="mt-1 text-sm font-black tabular-nums">
+            <span className="text-green-500">{winSwing}</span>
+            <span className="text-zinc-600"> / </span>
+            <span className="text-red-500">{loseSwing}</span>
+          </p>
+        </div>
       </div>
     </article>
   );
