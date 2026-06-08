@@ -6,6 +6,7 @@ import {
   createAdminClient,
   hasSupabaseAdminConfig,
 } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import {
   mapFight,
   mapFightResult,
@@ -24,20 +25,30 @@ let inflight: Promise<void> | null = null;
 export async function ensureSupabaseGradingForSettledFights(): Promise<void> {
   if (!hasSupabaseAdminConfig()) return;
   if (inflight) {
-    await inflight;
+    try {
+      await inflight;
+    } catch (error) {
+      console.error("ensureSupabaseGradingForSettledFights failed:", error);
+    }
     return;
   }
 
   inflight = runSupabaseGrading().finally(() => {
     inflight = null;
   });
-  await inflight;
+
+  try {
+    await inflight;
+  } catch (error) {
+    console.error("ensureSupabaseGradingForSettledFights failed:", error);
+  }
 }
 
 async function runSupabaseGrading(): Promise<void> {
+  const supabase = await createClient();
   const admin = createAdminClient();
 
-  const { data: fightRows, error: fightsError } = await admin
+  const { data: fightRows, error: fightsError } = await supabase
     .from("fights")
     .select("*")
     .in("status", [...SETTLED_STATUSES]);
@@ -45,7 +56,7 @@ async function runSupabaseGrading(): Promise<void> {
   if (!fightRows?.length) return;
 
   const fightIds = fightRows.map((row) => row.id as string);
-  const { data: resultRows, error: resultsError } = await admin
+  const { data: resultRows, error: resultsError } = await supabase
     .from("fight_results")
     .select("*")
     .in("fight_id", fightIds);
@@ -62,7 +73,7 @@ async function runSupabaseGrading(): Promise<void> {
     const fight = mapFight(fightRow);
     const result = mapFightResult(resultRow);
 
-    const { data: predRows, error: predError } = await admin
+    const { data: predRows, error: predError } = await supabase
       .from("predictions")
       .select("*")
       .eq("fight_id", fight.id)
@@ -91,7 +102,7 @@ async function runSupabaseGrading(): Promise<void> {
 
       if (gradedPick.rating_change == null) continue;
 
-      const { data: profileRow, error: profileError } = await admin
+      const { data: profileRow, error: profileError } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", gradedPick.user_id)

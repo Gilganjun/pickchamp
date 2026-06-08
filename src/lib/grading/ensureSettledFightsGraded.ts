@@ -5,11 +5,16 @@ import { ensureSupabaseGradingForSettledFights } from "@/lib/grading/syncSupabas
 /**
  * Grade predictions for settled fights that have results but were never
  * run through the admin settle pipeline (e.g. SQL-only result seeds).
+ * Failures are logged and must not break page loads.
  */
 export async function ensureSettledFightsGraded(): Promise<void> {
-  if (usesLiveSupabase()) {
-    await ensureSupabaseGradingForSettledFights();
-    return;
+  try {
+    if (usesLiveSupabase()) {
+      await ensureSupabaseGradingForSettledFights();
+      return;
+    }
+    syncDemoGradingForSettledFights();
+  } catch (error) {
+    console.error("ensureSettledFightsGraded failed:", error);
   }
-  syncDemoGradingForSettledFights();
 }
