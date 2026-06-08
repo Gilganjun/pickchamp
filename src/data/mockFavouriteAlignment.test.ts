@@ -206,6 +206,14 @@ const MARKET_ALIGNED: Record<
   "fight-171": { favourite_side: "fighterA", favourite_level: "favourite" }, // Williams #136 6-0-0 vs Baxter #329 8-1-0
   "fight-172": { favourite_side: "fighterA", favourite_level: "favourite" }, // Thompson #179 10-0-0 vs Rodriguez #268 12-11-3
   "fight-173": { favourite_side: "fighterA", favourite_level: "favourite" }, // Lopez De Jesus #79 5-0-0 vs Motos #358 6-2-0
+  // UFC Freedom 250 — Topuria vs. Gaethje (14 Jun 2026, White House)
+  "fight-174": { favourite_side: "fighterA", favourite_level: "favourite" }, // Topuria (c) vs Gaethje (ic)
+  "fight-175": { favourite_side: "none", favourite_level: "even" }, // Pereira -115 vs Gane -105 (UFC.com)
+  "fight-176": { favourite_side: "fighterA", favourite_level: "favourite" }, // O'Malley -360 vs Zahabi +280
+  "fight-177": { favourite_side: "fighterA", favourite_level: "favourite" }, // Hokit -330 vs Lewis +265
+  "fight-178": { favourite_side: "fighterA", favourite_level: "favourite" }, // Ruffy -700 vs Chandler +500
+  "fight-179": { favourite_side: "fighterA", favourite_level: "favourite" }, // Nickal -300 vs Daukaus +240
+  "fight-180": { favourite_side: "fighterA", favourite_level: "favourite" }, // Lopes vs Garcia
 };
 
 describe("mock favourite alignment with market odds sheets", () => {
