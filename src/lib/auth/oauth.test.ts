@@ -18,4 +18,18 @@ describe("buildOAuthCallbackUrl", () => {
       "https://pickfist.com/auth/callback?flow=signup&next=%2Fpicks&pending_username=gorguruga"
     );
   });
+
+  it("marks session-only OAuth when stay signed in is disabled", () => {
+    expect(
+      buildOAuthCallbackUrl(
+        "https://pickfist.com",
+        "login",
+        "/picks",
+        undefined,
+        false
+      )
+    ).toBe(
+      "https://pickfist.com/auth/callback?flow=login&next=%2Fpicks&remember=0"
+    );
+  });
 });

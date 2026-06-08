@@ -10,12 +10,14 @@ import {
 import { AuthCard } from "@/components/auth/AuthCard";
 import { AuthDivider } from "@/components/auth/AuthDivider";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
+import { StaySignedInField } from "@/components/auth/StaySignedInField";
 import { getAuthErrorMessage } from "@/lib/auth/errors";
 
 function LoginForm() {
   const searchParams = useSearchParams();
   const oauthError = getAuthErrorMessage(searchParams.get("error"));
   const [error, setError] = useState<string | null>(oauthError);
+  const [staySignedIn, setStaySignedIn] = useState(true);
   const [pending, startTransition] = useTransition();
 
   return (
@@ -68,6 +70,10 @@ function LoginForm() {
             className="mt-1 w-full rounded-xl border border-[#2a2a2a] bg-[#181818] px-4 py-3 text-white outline-none focus:border-red-600"
           />
         </label>
+        <StaySignedInField
+          checked={staySignedIn}
+          onChange={setStaySignedIn}
+        />
         {error ? (
           <p className="rounded-lg border border-red-900/50 bg-red-950/40 px-3 py-2 text-sm text-red-300">
             {error}
@@ -85,6 +91,9 @@ function LoginForm() {
       <AuthDivider />
 
       <form action={signInWithGoogleLoginAction}>
+        {staySignedIn ? (
+          <input type="hidden" name="rememberMe" value="on" />
+        ) : null}
         <GoogleAuthButton disabled={pending} />
       </form>
     </AuthCard>

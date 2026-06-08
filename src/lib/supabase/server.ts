@@ -1,18 +1,26 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { getAuthCookieOptions } from "@/lib/auth/rememberMe";
 import { hasSupabaseConfig } from "@/lib/config";
 
-export async function createClient() {
+type CreateClientOptions = {
+  /** When true (default), auth cookies persist across browser restarts. */
+  rememberMe?: boolean;
+};
+
+export async function createClient(options: CreateClientOptions = {}) {
   if (!hasSupabaseConfig()) {
     throw new Error("Supabase is not configured");
   }
 
+  const rememberMe = options.rememberMe ?? true;
   const cookieStore = await cookies();
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: getAuthCookieOptions(rememberMe),
       cookies: {
         getAll() {
           return cookieStore.getAll();

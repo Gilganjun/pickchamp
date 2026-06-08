@@ -11,11 +11,15 @@ export function buildOAuthCallbackUrl(
   origin: string,
   flow: OAuthFlow,
   next = "/picks",
-  pendingUsername?: string
+  pendingUsername?: string,
+  rememberMe = true
 ): string {
   const params = new URLSearchParams({ flow, next });
   if (pendingUsername) {
     params.set("pending_username", pendingUsername);
+  }
+  if (!rememberMe) {
+    params.set("remember", "0");
   }
   return `${origin}/auth/callback?${params.toString()}`;
 }

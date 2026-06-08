@@ -5,6 +5,7 @@ import {
   isUsernameAvailable,
 } from "@/lib/auth/oauth";
 import { getSiteOrigin } from "@/lib/auth/site";
+import { parseRememberMe } from "@/lib/auth/rememberMe";
 import {
   normalizeUsername,
   validateUsername,
@@ -63,7 +64,8 @@ export async function signUpAction(formData: FormData): Promise<AuthActionResult
   }
 
   const normalizedUsername = normalizeUsername(username);
-  const supabase = await createClient();
+  const rememberMe = parseRememberMe(formData);
+  const supabase = await createClient({ rememberMe });
 
   const available = await isUsernameAvailable(supabase, normalizedUsername);
   if (!available) {
@@ -110,7 +112,8 @@ export async function signInAction(formData: FormData): Promise<AuthActionResult
   if (!email) return { ok: false, error: "Email is required." };
   if (!password) return { ok: false, error: "Password is required." };
 
-  const supabase = await createClient();
+  const rememberMe = parseRememberMe(formData);
+  const supabase = await createClient({ rememberMe });
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -144,7 +147,8 @@ export async function signInWithGoogleSignupAction(
   }
 
   const normalizedUsername = normalizeUsername(username);
-  const supabase = await createClient();
+  const rememberMe = parseRememberMe(formData);
+  const supabase = await createClient({ rememberMe });
   const available = await isUsernameAvailable(supabase, normalizedUsername);
   if (!available) {
     redirect(
@@ -160,7 +164,8 @@ export async function signInWithGoogleSignupAction(
         origin,
         "signup",
         "/picks",
-        normalizedUsername
+        normalizedUsername,
+        rememberMe
       ),
       queryParams: {
         prompt: "select_account",
@@ -175,20 +180,26 @@ export async function signInWithGoogleSignupAction(
   redirect(data.url);
 }
 
-export async function signInWithGoogleLoginAction(): Promise<void> {
+export async function signInWithGoogleLoginAction(
+  formData: FormData
+): Promise<void> {
   if (!usesLiveSupabase()) {
     demoModeRedirect("/login");
   }
 
-  const supabase = await createClient();
+  const rememberMe = parseRememberMe(formData);
+  const supabase = await createClient({ rememberMe });
   const origin = await getSiteOrigin();
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: buildOAuthCallbackUrl(origin, "login"),
-      queryParams: {
-        prompt: "select_account",
-      },
+      redirectTo: buildOAuthCallbackUrl(
+        origin,
+        "login",
+        "/picks",
+        undefined,
+        rememberMe
+      ),
     },
   });
 

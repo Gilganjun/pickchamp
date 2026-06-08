@@ -10,12 +10,14 @@ import {
 import { AuthCard } from "@/components/auth/AuthCard";
 import { AuthDivider } from "@/components/auth/AuthDivider";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
+import { StaySignedInField } from "@/components/auth/StaySignedInField";
 import { getAuthErrorMessage } from "@/lib/auth/errors";
 
 function SignUpForm() {
   const searchParams = useSearchParams();
   const oauthError = getAuthErrorMessage(searchParams.get("error"));
   const [username, setUsername] = useState("");
+  const [staySignedIn, setStaySignedIn] = useState(true);
   const [error, setError] = useState<string | null>(oauthError);
   const [success, setSuccess] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -110,6 +112,10 @@ function SignUpForm() {
               Minimum 6 characters
             </span>
           </label>
+          <StaySignedInField
+            checked={staySignedIn}
+            onChange={setStaySignedIn}
+          />
           <button
             type="submit"
             disabled={pending}
@@ -132,6 +138,9 @@ function SignUpForm() {
           }}
         >
           <input type="hidden" name="username" value={username} />
+          {staySignedIn ? (
+            <input type="hidden" name="rememberMe" value="on" />
+          ) : null}
           <GoogleAuthButton disabled={pending} />
         </form>
       </div>

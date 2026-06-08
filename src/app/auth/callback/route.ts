@@ -1,4 +1,5 @@
 import { resolveOAuthCallbackPath, type OAuthFlow } from "@/lib/auth/oauth";
+import { parseRememberMeParam } from "@/lib/auth/rememberMe";
 import { hasSupabaseConfig } from "@/lib/config";
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
@@ -9,6 +10,7 @@ export async function GET(request: Request) {
   const next = searchParams.get("next") ?? "/picks";
   const flow = (searchParams.get("flow") ?? "login") as OAuthFlow;
   const pendingUsername = searchParams.get("pending_username");
+  const rememberMe = parseRememberMeParam(searchParams.get("remember"));
   const oauthError = searchParams.get("error");
 
   if (!hasSupabaseConfig()) {
@@ -23,7 +25,7 @@ export async function GET(request: Request) {
   }
 
   if (code) {
-    const supabase = await createClient();
+    const supabase = await createClient({ rememberMe });
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
       const {
