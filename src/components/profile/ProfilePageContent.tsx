@@ -75,6 +75,8 @@ export function ProfilePageContent({
             profile={profile}
             rank={ranks.boxing}
             rating={profile.boxing_rating}
+            predictions={predictions}
+            fights={fights}
             compact
           />
           <SportBreakdownCard
@@ -82,6 +84,8 @@ export function ProfilePageContent({
             profile={profile}
             rank={ranks.mma}
             rating={profile.mma_rating}
+            predictions={predictions}
+            fights={fights}
             compact
           />
         </div>

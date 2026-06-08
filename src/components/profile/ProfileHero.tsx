@@ -2,12 +2,13 @@ import { ProfileQuickStats } from "@/components/profile/ProfileQuickStats";
 import { ProgressBar } from "@/components/profile/ProgressBar";
 import { RankGraphic } from "@/components/profile/RankGraphic";
 import { ProfileRecentFormStrip } from "@/components/profile/ProfileRecentFormStrip";
+import { WorldRankDisplay } from "@/components/profile/WorldRankDisplay";
 import {
-  formatPicksToQualifyLabel,
   getGlobalRankHeroState,
   getLockedPickCount,
   getPredictorTitle,
   getRecentFormSummary,
+  getWorldRankingLabel,
 } from "@/lib/profile/display";
 import { getTierIndex } from "@/lib/profile/rankGraphics";
 import {
@@ -103,33 +104,12 @@ export function ProfileHero({
           )}
         </div>
 
-        <div className="min-w-[4.75rem] border-l border-[#2a2a2a] pl-2 text-center">
-          <p className="text-[8px] font-bold uppercase tracking-[0.12em] text-zinc-500">
-            Global Rank
-          </p>
-          {globalRankState.kind === "official" ? (
-            <>
-              <p className="mt-0.5 text-xl font-black tabular-nums leading-none text-white">
-                #{globalRankState.rank.toLocaleString()}
-              </p>
-              <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wide text-zinc-400">
-                World
-              </p>
-            </>
-          ) : globalRankState.kind === "waiting_results" ? (
-            <>
-              <p className="mt-0.5 text-xs font-black uppercase leading-tight tracking-tight text-[#d4a853]">
-                Qualified
-              </p>
-              <p className="mt-1 text-[8px] font-semibold uppercase leading-tight tracking-wide text-zinc-500">
-                Waiting for fight results
-              </p>
-            </>
-          ) : (
-            <p className="mt-0.5 text-xs font-black uppercase leading-tight tracking-tight text-orange-500">
-              {formatPicksToQualifyLabel(globalRankState.remaining)}
-            </p>
-          )}
+        <div className="min-w-[4.75rem] border-l border-[#2a2a2a] pl-2">
+          <WorldRankDisplay
+            state={globalRankState}
+            label={getWorldRankingLabel("global", "profile")}
+            variant="hero"
+          />
         </div>
       </div>
 

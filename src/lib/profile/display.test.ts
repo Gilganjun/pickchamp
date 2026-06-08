@@ -4,9 +4,12 @@ import {
   getCurrentPickItems,
   getGlobalRankHeroState,
   getLockedPickCount,
+  getLockedPickCountForSport,
   getProgress,
   getRecentFormOutcomes,
   getRecentFormSummary,
+  getSportRankHeroState,
+  getWorldRankingLabel,
   hasHiddenOpenPicksOnPublicProfile,
   getSportPickStats,
 } from "./display";
@@ -16,7 +19,8 @@ import type { Event, FightWithRelations, Profile, Prediction } from "@/types";
 function makeFight(
   id: string,
   lockTime: string,
-  status: FightWithRelations["status"] = "upcoming"
+  status: FightWithRelations["status"] = "upcoming",
+  sport: FightWithRelations["sport"] = "boxing"
 ): FightWithRelations {
   const event: Event = {
     id: "evt-1",
@@ -30,7 +34,7 @@ function makeFight(
   return {
     id,
     event_id: event.id,
-    sport: "boxing",
+    sport,
     fighter_a_name: "Fighter A",
     fighter_b_name: "Fighter B",
     scheduled_rounds: 10,
@@ -71,12 +75,12 @@ function makePrediction(fightId: string, gradedAt: string | null): Prediction {
 
 describe("formatPicksToQualifyLabel", () => {
   it("uses singular pick when one remains", () => {
-    expect(formatPicksToQualifyLabel(1)).toBe("1 PICK TO QUALIFY");
+    expect(formatPicksToQualifyLabel(1)).toBe("1 PICK TO GO");
   });
 
   it("uses plural picks otherwise", () => {
-    expect(formatPicksToQualifyLabel(10)).toBe("10 PICKS TO QUALIFY");
-    expect(formatPicksToQualifyLabel(3)).toBe("3 PICKS TO QUALIFY");
+    expect(formatPicksToQualifyLabel(10)).toBe("10 PICKS TO GO");
+    expect(formatPicksToQualifyLabel(3)).toBe("3 PICKS TO GO");
   });
 });
 
@@ -97,6 +101,78 @@ describe("getLockedPickCount", () => {
     ];
 
     expect(getLockedPickCount(predictions, fights)).toBe(2);
+  });
+});
+
+describe("getLockedPickCountForSport", () => {
+  const pastLock = "2020-01-01T18:00:00Z";
+
+  it("counts locked picks for one sport only", () => {
+    const fights = [
+      makeFight("f-box-locked", pastLock, "locked", "boxing"),
+      makeFight("f-mma-locked", pastLock, "locked", "mma"),
+      makeFight("f-box-open", "2099-01-01T18:00:00Z", "upcoming", "boxing"),
+    ];
+    const predictions = [
+      makePrediction("f-box-locked", null),
+      makePrediction("f-mma-locked", null),
+      makePrediction("f-box-open", null),
+    ];
+
+    expect(getLockedPickCountForSport(predictions, fights, "boxing")).toBe(1);
+    expect(getLockedPickCountForSport(predictions, fights, "mma")).toBe(1);
+  });
+});
+
+describe("getSportRankHeroState", () => {
+  const officialRank: RankDisplay = {
+    label: "#17 Boxing",
+    status: "official",
+    rank: 17,
+  };
+  const provisionalRank: RankDisplay = {
+    label: "Not Yet Qualified",
+    status: "provisional",
+  };
+
+  it("uses locked picks for sport qualification display", () => {
+    expect(getSportRankHeroState("boxing", 0, provisionalRank)).toEqual({
+      kind: "needs_locked",
+      remaining: 5,
+    });
+    expect(getSportRankHeroState("boxing", 3, provisionalRank)).toEqual({
+      kind: "needs_locked",
+      remaining: 2,
+    });
+    expect(getSportRankHeroState("boxing", 5, provisionalRank)).toEqual({
+      kind: "waiting_results",
+    });
+    expect(getSportRankHeroState("mma", 6, provisionalRank)).toEqual({
+      kind: "waiting_results",
+    });
+    expect(getSportRankHeroState("boxing", 5, officialRank)).toEqual({
+      kind: "official",
+      rank: 17,
+    });
+  });
+});
+
+describe("getWorldRankingLabel", () => {
+  it("uses explicit labels on profile", () => {
+    expect(getWorldRankingLabel("global", "profile")).toBe(
+      "Global World Ranking"
+    );
+    expect(getWorldRankingLabel("boxing", "profile")).toBe(
+      "Boxing World Ranking"
+    );
+    expect(getWorldRankingLabel("mma", "profile")).toBe("MMA World Ranking");
+  });
+
+  it("omits sport labels on leaderboard tabs with context", () => {
+    expect(getWorldRankingLabel("boxing", "leaderboard")).toBe("");
+    expect(getWorldRankingLabel("global", "leaderboard")).toBe(
+      "Global World Ranking"
+    );
   });
 });
 

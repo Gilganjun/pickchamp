@@ -42,11 +42,11 @@ export function getQualificationProgressLabel(
   current: number,
   threshold: number
 ): string {
-  return `${current} of ${threshold} qualifying picks completed`;
+  return `${current} of ${threshold} scored picks`;
 }
 
 export function getQualificationRemainingLabel(remaining: number): string {
-  return `${remaining} qualifying pick${remaining === 1 ? "" : "s"} remaining`;
+  return `${remaining} pick${remaining === 1 ? "" : "s"} to go`;
 }
 
 export function getGlobalQualificationSportHint(): string {
@@ -60,7 +60,7 @@ export type GlobalRankHeroState =
 
 export function formatPicksToQualifyLabel(remaining: number): string {
   const n = Math.max(0, remaining);
-  return `${n} PICK${n === 1 ? "" : "S"} TO QUALIFY`;
+  return `${n} PICK${n === 1 ? "" : "S"} TO GO`;
 }
 
 /** Locked picks: predictions on fights past lock time (graded or not). */
@@ -78,11 +78,27 @@ export function getLockedPickCount(
   }, 0);
 }
 
-export function getGlobalRankHeroState(
+export function getLockedPickCountForSport(
+  predictions: Prediction[],
+  fights: FightWithRelations[],
+  sport: "boxing" | "mma"
+): number {
+  const fightById = new Map(fights.map((f) => [f.id, f]));
+  return predictions.reduce((count, pred) => {
+    const fight = fightById.get(pred.fight_id);
+    if (fight && fight.sport === sport && isFightLocked(fight)) {
+      return count + 1;
+    }
+    return count;
+  }, 0);
+}
+
+export function getWorldRankHeroState(
+  tab: RankingTab,
   lockedPickCount: number,
   rank: RankDisplay
 ): GlobalRankHeroState {
-  const threshold = getEligibilityThreshold("global");
+  const threshold = getEligibilityThreshold(tab);
   if (rank.status === "official" && rank.rank != null) {
     return { kind: "official", rank: rank.rank };
   }
@@ -93,6 +109,33 @@ export function getGlobalRankHeroState(
     kind: "needs_locked",
     remaining: Math.max(0, threshold - lockedPickCount),
   };
+}
+
+export function getGlobalRankHeroState(
+  lockedPickCount: number,
+  rank: RankDisplay
+): GlobalRankHeroState {
+  return getWorldRankHeroState("global", lockedPickCount, rank);
+}
+
+export function getSportRankHeroState(
+  sport: "boxing" | "mma",
+  lockedPickCount: number,
+  rank: RankDisplay
+): GlobalRankHeroState {
+  return getWorldRankHeroState(sport, lockedPickCount, rank);
+}
+
+export function getWorldRankingLabel(
+  tab: RankingTab,
+  context: "profile" | "leaderboard"
+): string {
+  if (context === "leaderboard") {
+    return tab === "global" ? "Global World Ranking" : "";
+  }
+  if (tab === "global") return "Global World Ranking";
+  if (tab === "boxing") return "Boxing World Ranking";
+  return "MMA World Ranking";
 }
 
 export function getSportQualificationHint(tab: "boxing" | "mma"): string {

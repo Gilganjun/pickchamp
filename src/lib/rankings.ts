@@ -74,7 +74,7 @@ export function getRankDisplay(
     return {
       label,
       status: "provisional",
-      progress: `${graded} of ${threshold} qualifying picks completed`,
+      progress: `${graded} of ${threshold} scored picks`,
     };
   }
   return {

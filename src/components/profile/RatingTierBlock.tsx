@@ -56,11 +56,11 @@ export function RatingTierBlock({
 
       <p
         className={cn(
-          "tabular-nums text-zinc-600",
+          "text-zinc-600",
           compact ? "mt-1 text-[10px]" : "mt-2 text-xs"
         )}
       >
-        Rating: {tier.rawRating}
+        Internal rating (advanced): {tier.rawRating}
       </p>
     </div>
   );

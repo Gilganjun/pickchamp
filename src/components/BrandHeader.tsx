@@ -60,8 +60,8 @@ export function BrandHeader({
         href="/picks"
         className={cn(
           "inline-flex items-center",
-          centered && "justify-center",
-          showProfileLink && "mx-auto"
+          centered && "mx-auto justify-center",
+          showProfileLink && !centered && "mx-auto"
         )}
         aria-label="PickFist home"
       >

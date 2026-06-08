@@ -10,6 +10,7 @@ interface AppShellProps {
   showTagline?: boolean;
   showBottomNav?: boolean;
   prominentBrand?: boolean;
+  centeredBrand?: boolean;
   showProfileLink?: boolean;
 }
 
@@ -19,6 +20,7 @@ export function AppShell({
   showTagline = true,
   showBottomNav = true,
   prominentBrand = false,
+  centeredBrand = false,
   showProfileLink = false,
 }: AppShellProps) {
   return (
@@ -28,7 +30,7 @@ export function AppShell({
           <BrandHeader
             showTagline={showTagline}
             prominent={prominentBrand}
-            centered={prominentBrand}
+            centered={prominentBrand || centeredBrand}
             showProfileLink={showProfileLink}
           />
         )}

@@ -1,14 +1,12 @@
 import { ProgressBar } from "@/components/profile/ProgressBar";
 import { RankGraphic } from "@/components/profile/RankGraphic";
+import { WorldRankDisplay } from "@/components/profile/WorldRankDisplay";
 import {
   formatSportRecord,
-  getEligibilityThreshold,
-  getGradedCountForTab,
-  getProgress,
-  getQualificationProgressLabel,
-  getQualificationRemainingLabel,
+  getLockedPickCountForSport,
   getSportPickStats,
-  getSportQualificationHint,
+  getSportRankHeroState,
+  getWorldRankingLabel,
 } from "@/lib/profile/display";
 import {
   formatTierDisplayName,
@@ -16,13 +14,21 @@ import {
   getRatingTier,
 } from "@/lib/profile/ratingTiers";
 import { cn } from "@/lib/utils";
-import type { Profile, RankDisplay, Sport } from "@/types";
+import type {
+  FightWithRelations,
+  Prediction,
+  Profile,
+  RankDisplay,
+  Sport,
+} from "@/types";
 
 interface SportBreakdownCardProps {
   sport: Sport;
   profile: Profile;
   rank: RankDisplay;
   rating: number;
+  predictions: Prediction[];
+  fights: FightWithRelations[];
   compact?: boolean;
 }
 
@@ -49,14 +55,16 @@ export function SportBreakdownCard({
   profile,
   rank,
   rating,
+  predictions,
+  fights,
   compact = false,
 }: SportBreakdownCardProps) {
   const meta = SPORT_META[sport];
   const tier = getRatingTier(rating);
-  const threshold = getEligibilityThreshold(sport);
-  const graded = getGradedCountForTab(profile, sport);
-  const progress = getProgress(graded, threshold);
   const pickStats = getSportPickStats(profile, sport);
+  const lockedPickCount = getLockedPickCountForSport(predictions, fights, sport);
+  const rankState = getSportRankHeroState(sport, lockedPickCount, rank);
+  const worldLabel = getWorldRankingLabel(sport, "profile");
   const sportBorder =
     sport === "boxing" ? "border-red-600/30" : "border-purple-600/30";
   const progressLabel = tier.isMaxTier
@@ -71,28 +79,23 @@ export function SportBreakdownCard({
           sportBorder
         )}
       >
-        <div className="flex items-center gap-1.5">
+        <WorldRankDisplay
+          state={rankState}
+          label={worldLabel}
+          variant="compact"
+        />
+
+        <div className="mt-2 flex items-center gap-1.5">
           <RankGraphic tierName={tier.currentTierName} size="xs" />
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <span className="text-sm" aria-hidden>
-                {meta.icon}
-              </span>
-              <h3
-                className={cn(
-                  "text-[10px] font-bold uppercase tracking-wide",
-                  meta.accent
-                )}
-              >
-                {meta.label}
-              </h3>
-            </div>
-            <p className="mt-0.5 text-lg font-black tabular-nums text-white">
-              {tier.rawRating}
+            <p className="text-[9px] font-black uppercase leading-tight tracking-wide text-zinc-200">
+              {formatTierDisplayName(tier.currentTierName)}
             </p>
             {!tier.isMaxTier ? (
               <>
-                <p className="mt-0.5 text-[8px] text-zinc-500">{progressLabel}</p>
+                <p className="mt-0.5 text-[7px] leading-tight text-zinc-500">
+                  {progressLabel}
+                </p>
                 <div className="mt-1">
                   <ProgressBar
                     percent={tier.progressPercent}
@@ -104,16 +107,23 @@ export function SportBreakdownCard({
             ) : null}
           </div>
         </div>
+
+        {pickStats.picks > 0 ? (
+          <p className="mt-1.5 text-[8px] tabular-nums text-zinc-500">
+            {formatSportRecord(
+              pickStats.correct,
+              pickStats.incorrect,
+              pickStats.accuracy
+            )}
+          </p>
+        ) : null}
       </article>
     );
   }
 
   return (
     <section
-      className={cn(
-        "rounded-xl border bg-[#111111] p-4",
-        sportBorder
-      )}
+      className={cn("rounded-xl border bg-[#111111] p-4", sportBorder)}
     >
       <div className="flex items-center gap-2">
         <span className="text-base" aria-hidden>
@@ -129,12 +139,21 @@ export function SportBreakdownCard({
         </h2>
       </div>
 
-      <p className="mt-3 text-2xl font-black tabular-nums text-white">
-        {tier.rawRating}
-      </p>
-      <p className="mt-1 text-xs font-black uppercase tracking-wide text-zinc-200">
-        {formatTierDisplayName(tier.currentTierName)}
-      </p>
+      <div className="mt-3">
+        <WorldRankDisplay
+          state={rankState}
+          label={worldLabel}
+          variant="compact"
+        />
+      </div>
+
+      <div className="mt-3 flex items-center gap-2">
+        <RankGraphic tierName={tier.currentTierName} size="sm" />
+        <p className="text-xs font-black uppercase tracking-wide text-zinc-200">
+          {formatTierDisplayName(tier.currentTierName)}
+        </p>
+      </div>
+
       {!tier.isMaxTier ? (
         <>
           <p className="mt-1 text-[10px] text-zinc-500">{progressLabel}</p>
@@ -147,13 +166,7 @@ export function SportBreakdownCard({
         </>
       ) : null}
 
-      {rank.status === "inactive" && (
-        <p className="mt-3 text-xs text-zinc-500">
-          Make your first {meta.label} pick
-        </p>
-      )}
-
-      {graded > 0 && (
+      {pickStats.picks > 0 && (
         <p className="mt-3 text-sm text-zinc-300">
           Record:{" "}
           <span className="font-semibold text-white">
@@ -163,22 +176,6 @@ export function SportBreakdownCard({
               pickStats.accuracy
             )}
           </span>
-        </p>
-      )}
-
-      {rank.status === "provisional" && (
-        <p className="mt-2 text-xs text-zinc-400">
-          Not Yet Qualified ·{" "}
-          {progress.remaining > 0
-            ? getQualificationRemainingLabel(progress.remaining)
-            : getQualificationProgressLabel(progress.current, threshold)}{" "}
-          {getSportQualificationHint(sport)}
-        </p>
-      )}
-
-      {rank.status === "official" && (
-        <p className="mt-2 text-xs text-zinc-400">
-          #{rank.rank?.toLocaleString() ?? "—"} {meta.label}
         </p>
       )}
     </section>
