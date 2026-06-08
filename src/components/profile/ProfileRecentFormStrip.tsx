@@ -2,6 +2,8 @@ import type { FormOutcome } from "@/lib/profile/display";
 
 interface ProfileRecentFormStripProps {
   outcomes: FormOutcome[];
+  currentStreak?: number;
+  variant?: "default" | "record-footer";
 }
 
 function FormChip({ outcome }: { outcome: FormOutcome }) {
@@ -24,29 +26,59 @@ function FormChip({ outcome }: { outcome: FormOutcome }) {
   );
 }
 
-export function ProfileRecentFormStrip({ outcomes }: ProfileRecentFormStripProps) {
-  if (outcomes.length === 0) return null;
+export function ProfileRecentFormStrip({
+  outcomes,
+  currentStreak = 0,
+  variant = "default",
+}: ProfileRecentFormStripProps) {
+  if (outcomes.length === 0 && currentStreak <= 0) return null;
 
   const wins = outcomes.filter((outcome) => outcome === "win").length;
   const losses = outcomes.filter((outcome) => outcome === "loss").length;
   const recordLabel = `${wins}–${losses}`;
+  const isFooter = variant === "record-footer";
 
   return (
     <div
-      className="mt-1 flex flex-wrap items-center gap-1"
-      aria-label={`Recent form: ${recordLabel} from last ${outcomes.length} picks`}
+      className={
+        isFooter
+          ? "mt-1.5 flex flex-wrap items-center justify-center gap-1 border-t border-[#2a2a2a] pt-1.5"
+          : "mt-1 space-y-0.5"
+      }
+      aria-label={
+        outcomes.length > 0
+          ? `Recent form: ${recordLabel} from last ${outcomes.length} picks`
+          : undefined
+      }
     >
-      <span className="text-[9px] font-semibold uppercase tracking-wide text-zinc-600">
-        Recent
-      </span>
-      <div className="flex items-center gap-0.5">
-        {outcomes.map((outcome, index) => (
-          <FormChip key={index} outcome={outcome} />
-        ))}
-      </div>
-      <span className="text-[9px] font-semibold tabular-nums text-zinc-500">
-        {recordLabel}
-      </span>
+      {outcomes.length > 0 ? (
+        <>
+          <span className="text-[8px] font-bold uppercase tracking-wide text-zinc-600">
+            Recent
+          </span>
+          <div className="flex items-center gap-0.5">
+            {outcomes.map((outcome, index) => (
+              <FormChip key={index} outcome={outcome} />
+            ))}
+          </div>
+          <span className="text-[8px] font-semibold tabular-nums text-zinc-500">
+            {recordLabel}
+          </span>
+        </>
+      ) : null}
+      {currentStreak > 0 ? (
+        <>
+          {outcomes.length > 0 ? (
+            <span className="text-[8px] text-zinc-700" aria-hidden>
+              ·
+            </span>
+          ) : null}
+          <span className="text-[8px] font-semibold text-zinc-500">
+            Streak{" "}
+            <span className="tabular-nums text-green-400">{currentStreak}</span>
+          </span>
+        </>
+      ) : null}
     </div>
   );
 }

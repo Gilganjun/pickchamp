@@ -1,12 +1,12 @@
 import { ProgressBar } from "@/components/profile/ProgressBar";
 import { RankGraphic } from "@/components/profile/RankGraphic";
+import { RankingTitleHeader } from "@/components/profile/RankingTitleHeader";
 import { WorldRankDisplay } from "@/components/profile/WorldRankDisplay";
 import {
   formatSportRecord,
   getLockedPickCountForSport,
   getSportPickStats,
   getSportRankHeroState,
-  getWorldRankingLabel,
 } from "@/lib/profile/display";
 import {
   formatTierDisplayName,
@@ -34,18 +34,26 @@ interface SportBreakdownCardProps {
 
 const SPORT_META: Record<
   Sport,
-  { label: string; icon: string; accent: string; barVariant: "red" | "gold" }
+  {
+    label: string;
+    icon: string;
+    accent: string;
+    accentBg: string;
+    barVariant: "red" | "gold";
+  }
 > = {
   boxing: {
     label: "Boxing",
     icon: "🥊",
     accent: "text-red-400",
+    accentBg: "from-red-950/40",
     barVariant: "red",
   },
   mma: {
     label: "MMA",
     icon: "⚡",
     accent: "text-purple-400",
+    accentBg: "from-purple-950/40",
     barVariant: "gold",
   },
 };
@@ -64,9 +72,8 @@ export function SportBreakdownCard({
   const pickStats = getSportPickStats(profile, sport);
   const lockedPickCount = getLockedPickCountForSport(predictions, fights, sport);
   const rankState = getSportRankHeroState(sport, lockedPickCount, rank);
-  const worldLabel = getWorldRankingLabel(sport, "profile");
   const sportBorder =
-    sport === "boxing" ? "border-red-600/30" : "border-purple-600/30";
+    sport === "boxing" ? "border-red-600/40" : "border-purple-600/40";
   const progressLabel = tier.isMaxTier
     ? "Max rank"
     : getPointsToNextRankLabel(tier).replace(" points", " pts");
@@ -75,25 +82,30 @@ export function SportBreakdownCard({
     return (
       <article
         className={cn(
-          "rounded-lg border bg-[#0d0d0d] p-2.5",
+          "rounded-lg border bg-gradient-to-b to-[#0d0d0d] p-3",
+          meta.accentBg,
           sportBorder
         )}
       >
-        <WorldRankDisplay
-          state={rankState}
-          label={worldLabel}
-          variant="compact"
+        <RankingTitleHeader
+          name={meta.label}
+          nameClassName={meta.accent}
+          trailing={meta.icon}
         />
 
-        <div className="mt-2 flex items-center gap-1.5">
+        <div className="mt-2.5">
+          <WorldRankDisplay state={rankState} label="" variant="sport" />
+        </div>
+
+        <div className="mt-2.5 flex items-center gap-1.5 border-t border-white/5 pt-2.5">
           <RankGraphic tierName={tier.currentTierName} size="xs" />
           <div className="min-w-0 flex-1">
-            <p className="text-[9px] font-black uppercase leading-tight tracking-wide text-zinc-200">
+            <p className="text-[10px] font-black uppercase leading-tight tracking-wide text-zinc-200">
               {formatTierDisplayName(tier.currentTierName)}
             </p>
             {!tier.isMaxTier ? (
               <>
-                <p className="mt-0.5 text-[7px] leading-tight text-zinc-500">
+                <p className="mt-0.5 text-[8px] leading-tight text-zinc-500">
                   {progressLabel}
                 </p>
                 <div className="mt-1">
@@ -109,7 +121,7 @@ export function SportBreakdownCard({
         </div>
 
         {pickStats.picks > 0 ? (
-          <p className="mt-1.5 text-[8px] tabular-nums text-zinc-500">
+          <p className="mt-2 text-[9px] tabular-nums text-zinc-500">
             {formatSportRecord(
               pickStats.correct,
               pickStats.incorrect,
@@ -123,28 +135,20 @@ export function SportBreakdownCard({
 
   return (
     <section
-      className={cn("rounded-xl border bg-[#111111] p-4", sportBorder)}
+      className={cn(
+        "rounded-xl border bg-gradient-to-b to-[#111111] p-4",
+        meta.accentBg,
+        sportBorder
+      )}
     >
-      <div className="flex items-center gap-2">
-        <span className="text-base" aria-hidden>
-          {meta.icon}
-        </span>
-        <h2
-          className={cn(
-            "text-sm font-bold uppercase tracking-wide",
-            meta.accent
-          )}
-        >
-          {meta.label}
-        </h2>
-      </div>
+      <RankingTitleHeader
+        name={meta.label}
+        nameClassName={meta.accent}
+        trailing={meta.icon}
+      />
 
       <div className="mt-3">
-        <WorldRankDisplay
-          state={rankState}
-          label={worldLabel}
-          variant="compact"
-        />
+        <WorldRankDisplay state={rankState} label="" variant="sport" />
       </div>
 
       <div className="mt-3 flex items-center gap-2">

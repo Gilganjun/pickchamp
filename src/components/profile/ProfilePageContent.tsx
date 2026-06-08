@@ -54,9 +54,6 @@ export function ProfilePageContent({
         predictions={predictions}
         fights={fights}
         accuracy={accuracy}
-        totalPicks={profile.total_picks}
-        currentStreak={profile.current_streak}
-        perfectPicks={profile.perfect_picks}
       />
 
       <CurrentPicksSection
@@ -66,8 +63,8 @@ export function ProfilePageContent({
       />
 
       <section>
-        <h2 className="mb-2 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-          Sport Breakdown
+        <h2 className="mb-2.5 text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+          Sport Rankings
         </h2>
         <div className="grid grid-cols-2 gap-2">
           <SportBreakdownCard

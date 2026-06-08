@@ -12,21 +12,172 @@ interface CurrentPicksSectionProps {
   showHiddenMessage: boolean;
 }
 
-function DownArrowCue() {
+type HeadingCuePhase = "down" | "left" | "right";
+
+const arrowSvgProps = {
+  viewBox: "0 0 24 24",
+  fill: "none" as const,
+  stroke: "currentColor",
+  strokeWidth: 2.5,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+};
+
+function DownArrowIcon({ className }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="current-picks-heading-arrow h-5 w-5 shrink-0 text-sky-400 sm:h-6 sm:w-6"
-      aria-hidden
-    >
+    <svg {...arrowSvgProps} className={className} aria-hidden>
       <path d="M12 5v14" />
       <path d="M6 13l6 6 6-6" />
     </svg>
+  );
+}
+
+function LeftArrowIcon({ className }: { className?: string }) {
+  return (
+    <svg {...arrowSvgProps} className={className} aria-hidden>
+      <path d="M15 6l-6 6 6 6" />
+    </svg>
+  );
+}
+
+function RightArrowIcon({ className }: { className?: string }) {
+  return (
+    <svg {...arrowSvgProps} className={className} aria-hidden>
+      <path d="M9 6l6 6-6 6" />
+    </svg>
+  );
+}
+
+const DOWN_FLASH_MS = 1400;
+const SWIPE_FLASH_MS = 1100;
+const DOWN_FLASH_COUNT = 3;
+
+function HeadingScrollCue({
+  side,
+  phase,
+  cycleKey,
+  enableSwipeCycle,
+}: {
+  side: "left" | "right";
+  phase: HeadingCuePhase;
+  cycleKey: number;
+  enableSwipeCycle: boolean;
+}) {
+  const iconClass =
+    "h-5 w-5 shrink-0 text-sky-400 current-picks-heading-cue-glow sm:h-6 sm:w-6";
+  const swipeClass =
+    "current-picks-swipe-word text-[8px] font-black uppercase tracking-wider text-sky-400 sm:text-[9px]";
+
+  const showDown =
+    phase === "down" ||
+    (phase === "left" && side === "right") ||
+    (phase === "right" && side === "left");
+
+  if (showDown) {
+    return (
+      <DownArrowIcon
+        key={phase === "down" ? `down-${cycleKey}` : `down-idle-${side}`}
+        className={cn(
+          iconClass,
+          phase === "down" &&
+            (enableSwipeCycle
+              ? "current-picks-heading-cue--down"
+              : "current-picks-heading-cue--down-loop")
+        )}
+      />
+    );
+  }
+
+  if (phase === "left" && side === "left") {
+    return (
+      <div
+        key={`left-${cycleKey}`}
+        className="flex items-center gap-0.5"
+        aria-hidden
+      >
+        <span className={swipeClass}>Swipe</span>
+        <LeftArrowIcon
+          className={cn(iconClass, "current-picks-heading-cue--left")}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      key={`right-${cycleKey}`}
+      className="flex items-center gap-0.5"
+      aria-hidden
+    >
+      <RightArrowIcon
+        className={cn(iconClass, "current-picks-heading-cue--right")}
+      />
+      <span className={swipeClass}>Swipe</span>
+    </div>
+  );
+}
+
+function CurrentPicksHeading({
+  itemCount,
+  hasOverflow,
+}: {
+  itemCount: number;
+  hasOverflow: boolean;
+}) {
+  const [phase, setPhase] = useState<HeadingCuePhase>("down");
+  const [cycleKey, setCycleKey] = useState(0);
+  const enableSwipeCycle = hasOverflow;
+
+  useEffect(() => {
+    if (!enableSwipeCycle) {
+      setPhase("down");
+      return;
+    }
+
+    const duration =
+      phase === "down"
+        ? DOWN_FLASH_MS * DOWN_FLASH_COUNT
+        : SWIPE_FLASH_MS;
+
+    const timer = setTimeout(() => {
+      if (phase === "right") {
+        setCycleKey((key) => key + 1);
+      }
+      setPhase((current) => {
+        if (current === "down") return "left";
+        if (current === "left") return "right";
+        return "down";
+      });
+    }, duration);
+
+    return () => clearTimeout(timer);
+  }, [phase, enableSwipeCycle]);
+
+  const showCues = itemCount > 0;
+
+  return (
+    <div className="flex items-center justify-center gap-2 sm:gap-3">
+      {showCues ? (
+        <HeadingScrollCue
+          side="left"
+          phase={phase}
+          cycleKey={cycleKey}
+          enableSwipeCycle={enableSwipeCycle}
+        />
+      ) : null}
+      <h2 className="text-center font-[family-name:var(--font-teko)] text-xl font-bold uppercase tracking-wide text-white">
+        Current Picks{" "}
+        <span className="text-sky-400">= {itemCount}</span>
+      </h2>
+      {showCues ? (
+        <HeadingScrollCue
+          side="right"
+          phase={phase}
+          cycleKey={cycleKey}
+          enableSwipeCycle={enableSwipeCycle}
+        />
+      ) : null}
+    </div>
   );
 }
 
@@ -148,14 +299,7 @@ export function CurrentPicksSection({
 
   return (
     <section>
-      <div className="flex items-center justify-center gap-2 sm:gap-3">
-        {items.length > 0 ? <DownArrowCue /> : null}
-        <h2 className="text-center font-[family-name:var(--font-teko)] text-xl font-bold uppercase tracking-wide text-white">
-          Current Picks{" "}
-          <span className="text-sky-400">= {items.length}</span>
-        </h2>
-        {items.length > 0 ? <DownArrowCue /> : null}
-      </div>
+      <CurrentPicksHeading itemCount={items.length} hasOverflow={hasOverflow} />
 
       {items.length === 0 ? (
         <div className="mt-2 rounded-xl border border-[#2a2a2a] bg-[#111111] p-4">
