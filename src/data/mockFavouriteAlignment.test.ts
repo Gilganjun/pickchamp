@@ -50,7 +50,7 @@ const MARKET_ALIGNED: Record<
   "fight-032": { favourite_side: "fighterB", favourite_level: "favourite" }, // Boateng 1-0 vs Cox debut
   "fight-033": { favourite_side: "none", favourite_level: "even" }, // Kay vs McCann — both debut
   "fight-034": { favourite_side: "fighterA", favourite_level: "favourite" }, // Jade Jones 1-0 vs Riccio debut
-  "fight-035": { favourite_side: "fighterA", favourite_level: "favourite" }, // Brooks 2-1 vs Amer 1-0
+  "fight-035": { favourite_side: "fighterA", favourite_level: "favourite" }, // Brooks 2-1 vs Pardesi 1-0
   "fight-036": { favourite_side: "fighterA", favourite_level: "favourite" }, // Del Busso 1-1 vs Nguyen debut
   "fight-037": { favourite_side: "none", favourite_level: "even" }, // Bathory vs Flanagan — both debut
   "fight-038": { favourite_side: "none", favourite_level: "even" }, // El-Madani vs Nevin — both debut

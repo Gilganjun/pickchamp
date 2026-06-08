@@ -827,7 +827,7 @@ export const mockFights: Fight[] = [
     event_id: "evt-004",
     sport: "boxing",
     fighter_a_name: "Adam Brooks",
-    fighter_b_name: "Rahim Amer",
+    fighter_b_name: "Rahim Amer Pardesi",
     scheduled_rounds: 6,
     weight_class: "Light Heavyweight",
     fight_order: 7,
