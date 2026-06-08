@@ -83,6 +83,39 @@ export async function savePredictionAction(input: {
   return result;
 }
 
+export async function getSyncedGuestPickFightIdsAction(fightIds: string[]) {
+  if (!usesLiveSupabase()) {
+    return { ok: false as const, error: "NOT_AVAILABLE" };
+  }
+
+  const user = await getAuthUser();
+  if (!user?.id) {
+    return { ok: false as const, error: "LOGIN_REQUIRED" };
+  }
+
+  if (fightIds.length === 0) {
+    return { ok: true as const, syncedFightIds: [] as string[] };
+  }
+
+  const uniqueFightIds = [...new Set(fightIds)];
+  const { createClient } = await import("@/lib/supabase/server");
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("predictions")
+    .select("fight_id")
+    .eq("user_id", user.id)
+    .in("fight_id", uniqueFightIds);
+
+  if (error) {
+    return { ok: false as const, error: error.message };
+  }
+
+  return {
+    ok: true as const,
+    syncedFightIds: (data ?? []).map((row) => row.fight_id as string),
+  };
+}
+
 export async function migrateGuestPicksAction(drafts: GuestPickDraft[]) {
   if (!usesLiveSupabase()) {
     return { ok: false as const, error: "NOT_AVAILABLE" };

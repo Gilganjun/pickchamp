@@ -1,6 +1,7 @@
 import type { PredictedMethod, PredictedOutcome } from "@/types";
 
 export const GUEST_PICKS_STORAGE_KEY = "pickfist-guest-picks";
+export const GUEST_PICKS_SYNCED_SESSION_KEY = "pickfist-guest-picks-account-synced";
 export const GUEST_PICKS_CHANGED_EVENT = "pickfist-guest-picks-changed";
 export const GUEST_PICKS_MIGRATED_EVENT = "pickfist-guest-picks-migrated";
 
@@ -110,4 +111,36 @@ export function removeGuestPick(fightId: string): void {
 
 export function clearGuestPicks(): void {
   writePayload({});
+}
+
+export function markGuestPicksAccountSynced(): void {
+  if (!isBrowser()) return;
+  window.sessionStorage.setItem(GUEST_PICKS_SYNCED_SESSION_KEY, "1");
+}
+
+export function consumeGuestPicksAccountSynced(): boolean {
+  if (!isBrowser()) return false;
+  const synced = window.sessionStorage.getItem(GUEST_PICKS_SYNCED_SESSION_KEY) === "1";
+  if (synced) {
+    window.sessionStorage.removeItem(GUEST_PICKS_SYNCED_SESSION_KEY);
+  }
+  return synced;
+}
+
+export function removeGuestPicksForFightIds(fightIds: string[]): number {
+  if (fightIds.length === 0) return 0;
+
+  const picks = getGuestPicks();
+  let removed = 0;
+  for (const fightId of fightIds) {
+    if (!picks[fightId]) continue;
+    delete picks[fightId];
+    removed += 1;
+  }
+
+  if (removed > 0) {
+    writePayload(picks);
+  }
+
+  return removed;
 }

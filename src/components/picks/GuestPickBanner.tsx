@@ -27,6 +27,11 @@ export function GuestPickBanner() {
     return () => window.removeEventListener(GUEST_PICKS_CHANGED_EVENT, refresh);
   }, []);
 
+  useEffect(() => {
+    if (!ready || isLoggedIn) return;
+    setCount(getGuestPickCount());
+  }, [ready, isLoggedIn]);
+
   if (!usesLiveSupabase() || !ready || isLoggedIn || count === 0) {
     return null;
   }

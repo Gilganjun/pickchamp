@@ -34,6 +34,7 @@ import { playPickImpactCombo } from "@/lib/audio/playPickImpactSound";
 import { savePredictionAction } from "@/app/actions/picks";
 import {
   type GuestPickDraft,
+  removeGuestPick,
   upsertGuestPick,
 } from "@/lib/picks/guestPickStore";
 import { useRouter } from "next/navigation";
@@ -269,6 +270,10 @@ export function FightCard({
   }, []);
 
   useEffect(() => {
+    if (isLoggedIn && existing) {
+      removeGuestPick(fight.id);
+    }
+
     setOutcome(
       existing?.predicted_outcome ?? guestDraft?.predicted_outcome ?? null
     );
@@ -281,7 +286,7 @@ export function FightCard({
       setSaveStatus("guest");
       setError(null);
     }
-  }, [existing, guestDraft, fight.id]);
+  }, [existing, guestDraft, fight.id, isLoggedIn]);
 
   const persistPick = useCallback(
     async (

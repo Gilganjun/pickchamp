@@ -5,11 +5,15 @@ import { migrateGuestPicksAction } from "@/app/actions/picks";
 import { usesLiveSupabase } from "@/lib/config";
 import {
   clearGuestPicks,
+  consumeGuestPicksAccountSynced,
+  getGuestPickCount,
   getGuestPicks,
   GUEST_PICKS_CHANGED_EVENT,
   GUEST_PICKS_MIGRATED_EVENT,
-  removeGuestPick,
+  markGuestPicksAccountSynced,
+  removeGuestPicksForFightIds,
 } from "@/lib/picks/guestPickStore";
+import { reconcileGuestPicksWithAccount } from "@/lib/picks/reconcileGuestPicks";
 import { createClient } from "@/lib/supabase/client";
 
 const MIGRATION_RETRY_DELAYS_MS = [250, 500, 1000, 1500, 2000];
@@ -18,22 +22,27 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function applyMigrationResult(result: {
-  ok: true;
-  migrated: number;
-  failed: number;
-  handledFightIds: string[];
-}): void {
-  for (const fightId of result.handledFightIds) {
-    removeGuestPick(fightId);
+function applyMigrationResult(
+  draftsCount: number,
+  result: {
+    ok: true;
+    migrated: number;
+    skipped: number;
+    failed: number;
+    handledFightIds: string[];
   }
+): void {
+  removeGuestPicksForFightIds(result.handledFightIds);
 
   if (result.failed === 0) {
     clearGuestPicks();
+    markGuestPicksAccountSynced();
   }
 
   window.dispatchEvent(new CustomEvent(GUEST_PICKS_CHANGED_EVENT));
-  if (result.migrated > 0) {
+
+  const savedToAccount = result.migrated > 0 || result.skipped > 0;
+  if (savedToAccount || (result.failed === 0 && draftsCount > 0)) {
     window.dispatchEvent(new CustomEvent(GUEST_PICKS_MIGRATED_EVENT));
   }
 }
@@ -81,7 +90,11 @@ export function GuestPickMigrator() {
           return;
         }
 
-        applyMigrationResult(result);
+        applyMigrationResult(drafts.length, result);
+
+        if (getGuestPickCount() > 0) {
+          await reconcileGuestPicksWithAccount();
+        }
       } finally {
         migratingRef.current = false;
       }
@@ -97,6 +110,14 @@ export function GuestPickMigrator() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") {
+        if (consumeGuestPicksAccountSynced()) {
+          clearGuestPicks();
+          window.dispatchEvent(new CustomEvent(GUEST_PICKS_CHANGED_EVENT));
+        }
+        return;
+      }
+
       if (
         session?.user &&
         (event === "INITIAL_SESSION" ||

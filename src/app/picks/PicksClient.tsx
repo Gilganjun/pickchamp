@@ -36,6 +36,7 @@ import {
   GUEST_PICKS_MIGRATED_EVENT,
   type GuestPickDraft,
 } from "@/lib/picks/guestPickStore";
+import { pruneGuestPicksByFightIds } from "@/lib/picks/reconcileGuestPicks";
 import { inferFightTab } from "@/lib/utils";
 import type {
   Event,
@@ -480,6 +481,17 @@ export function PicksClient({
     return () =>
       window.removeEventListener(GUEST_PICKS_MIGRATED_EVENT, onMigrated);
   }, [load]);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    const syncedFightIds = fights
+      .filter((fight) => fight.userPrediction)
+      .map((fight) => fight.id);
+    if (syncedFightIds.length > 0) {
+      pruneGuestPicksByFightIds(syncedFightIds);
+    }
+  }, [fights, isLoggedIn]);
 
   const handleSportChange = (next: SF) => {
     setSport(next);
