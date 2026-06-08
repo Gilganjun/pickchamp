@@ -435,7 +435,13 @@ function PickSectionHeader({
   );
 }
 
-export type PickSaveStatus = "idle" | "saving" | "saved" | "updated" | "error";
+export type PickSaveStatus =
+  | "idle"
+  | "saving"
+  | "saved"
+  | "updated"
+  | "error"
+  | "guest";
 
 function PickAutoSaveStatus({
   status,
@@ -447,6 +453,19 @@ function PickAutoSaveStatus({
   onRetry?: () => void;
 }) {
   if (status === "idle" && !error) return null;
+
+  if (status === "guest") {
+    return (
+      <div className="mt-4 text-center">
+        <p className="text-xs font-semibold text-amber-400">
+          Draft pick — sign in to save
+        </p>
+        <p className="mt-1 text-[11px] text-zinc-500">
+          Your pick is stored on this device until you log in.
+        </p>
+      </div>
+    );
+  }
 
   if (status === "saving") {
     return (

@@ -3,6 +3,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { Geist, Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import { EventCardStyleProvider } from "@/components/EventCardStyleProvider";
+import { GuestPickMigrator } from "@/components/picks/GuestPickMigrator";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -61,7 +62,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${teko.variable} antialiased bg-[#070707] text-white`}
       >
-        <EventCardStyleProvider>{children}</EventCardStyleProvider>
+        <EventCardStyleProvider>
+          <GuestPickMigrator />
+          {children}
+        </EventCardStyleProvider>
         <Analytics />
       </body>
     </html>

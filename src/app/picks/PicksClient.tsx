@@ -30,6 +30,12 @@ import {
   isCardExpandHintDismissed,
 } from "@/lib/ui/cardExpandHint";
 import { CHANGE_PICK_QUERY_KEY } from "@/lib/picks/changePickRoute";
+import {
+  getGuestPicks,
+  GUEST_PICKS_CHANGED_EVENT,
+  GUEST_PICKS_MIGRATED_EVENT,
+  type GuestPickDraft,
+} from "@/lib/picks/guestPickStore";
 import { inferFightTab } from "@/lib/utils";
 import type {
   Event,
@@ -45,11 +51,15 @@ type PointerTarget =
 
 function PicksFightList({
   fights,
+  guestDrafts,
   onPredictionSaved,
+  onGuestPickSaved,
   isLoggedIn,
 }: {
   fights: FightWithRelations[];
+  guestDrafts: Record<string, GuestPickDraft>;
   onPredictionSaved: (fightId: string, prediction: Prediction) => void;
+  onGuestPickSaved: (fightId: string, draft: GuestPickDraft) => void;
   isLoggedIn: boolean;
 }) {
   return (
@@ -58,7 +68,9 @@ function PicksFightList({
         <FightCard
           key={fight.id}
           fight={fight}
+          guestDraft={isLoggedIn ? null : (guestDrafts[fight.id] ?? null)}
           onPredictionSaved={onPredictionSaved}
+          onGuestPickSaved={onGuestPickSaved}
           enablePickImpact
           isLoggedIn={isLoggedIn}
         />
@@ -97,7 +109,9 @@ function CardCollapseChevron({ expanded }: { expanded: boolean }) {
 function EventCardSection({
   event,
   fights,
+  guestDrafts,
   onPredictionSaved,
+  onGuestPickSaved,
   isLoggedIn,
   hideLockOverlay = false,
   showExpandPointer = false,
@@ -108,7 +122,9 @@ function EventCardSection({
 }: {
   event: Event;
   fights: FightWithRelations[];
+  guestDrafts: Record<string, GuestPickDraft>;
   onPredictionSaved: (fightId: string, prediction: Prediction) => void;
+  onGuestPickSaved: (fightId: string, draft: GuestPickDraft) => void;
   isLoggedIn: boolean;
   hideLockOverlay?: boolean;
   showExpandPointer?: boolean;
@@ -224,7 +240,9 @@ function EventCardSection({
           </p>
           <PicksFightList
             fights={fights}
+            guestDrafts={guestDrafts}
             onPredictionSaved={onPredictionSaved}
+            onGuestPickSaved={onGuestPickSaved}
             isLoggedIn={isLoggedIn}
           />
         </div>
@@ -238,7 +256,9 @@ type EventFightGroup = ReturnType<typeof groupFightsByEvent>[number];
 function PastPicksSection({
   groups,
   eventCard,
+  guestDrafts,
   onPredictionSaved,
+  onGuestPickSaved,
   isLoggedIn,
   expanded,
   onExpandedChange,
@@ -251,7 +271,9 @@ function PastPicksSection({
 }: {
   groups: EventFightGroup[];
   eventCard: CardFilterValue;
+  guestDrafts: Record<string, GuestPickDraft>;
   onPredictionSaved: (fightId: string, prediction: Prediction) => void;
+  onGuestPickSaved: (fightId: string, draft: GuestPickDraft) => void;
   isLoggedIn: boolean;
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
@@ -295,7 +317,9 @@ function PastPicksSection({
               key={`${event.id}-${eventCard}`}
               event={event}
               fights={cardFights}
+              guestDrafts={guestDrafts}
               onPredictionSaved={onPredictionSaved}
+              onGuestPickSaved={onGuestPickSaved}
               isLoggedIn={isLoggedIn}
               hideLockOverlay
               showExpandPointer={
@@ -345,6 +369,9 @@ export function PicksClient({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(initialError);
   const [isLoggedIn, setIsLoggedIn] = useState(initialIsLoggedIn);
+  const [guestDrafts, setGuestDrafts] = useState<Record<string, GuestPickDraft>>(
+    {}
+  );
   const [hintDismissed, setHintDismissed] = useState(true);
   const [pastPicksExpanded, setPastPicksExpanded] = useState(false);
   const [activeExpandedIds, setActiveExpandedIds] = useState<Set<string>>(
@@ -357,6 +384,23 @@ export function PicksClient({
   useEffect(() => {
     setHintDismissed(isCardExpandHintDismissed("picks"));
   }, []);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      setGuestDrafts({});
+      return;
+    }
+    setGuestDrafts(getGuestPicks());
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    if (isLoggedIn) return;
+
+    const refreshGuestDrafts = () => setGuestDrafts(getGuestPicks());
+    window.addEventListener(GUEST_PICKS_CHANGED_EVENT, refreshGuestDrafts);
+    return () =>
+      window.removeEventListener(GUEST_PICKS_CHANGED_EVENT, refreshGuestDrafts);
+  }, [isLoggedIn]);
 
   useEffect(() => {
     const fightId = searchParams.get(CHANGE_PICK_QUERY_KEY);
@@ -427,6 +471,17 @@ export function PicksClient({
     }
     load();
   }, [load, sport, eventCard]);
+
+  useEffect(() => {
+    const onMigrated = () => {
+      if (isLoggedIn) {
+        void load();
+      }
+    };
+    window.addEventListener(GUEST_PICKS_MIGRATED_EVENT, onMigrated);
+    return () =>
+      window.removeEventListener(GUEST_PICKS_MIGRATED_EVENT, onMigrated);
+  }, [isLoggedIn, load]);
 
   const handleSportChange = (next: SF) => {
     setSport(next);
@@ -613,6 +668,13 @@ export function PicksClient({
     []
   );
 
+  const handleGuestPickSaved = useCallback(
+    (fightId: string, draft: GuestPickDraft) => {
+      setGuestDrafts((current) => ({ ...current, [fightId]: draft }));
+    },
+    []
+  );
+
   return (
     <AppShell prominentBrand showTagline showProfileLink>
       <div className="mt-0.5">
@@ -645,7 +707,9 @@ export function PicksClient({
               <PastPicksSection
                 groups={lockedGroups}
                 eventCard={eventCard}
+                guestDrafts={guestDrafts}
                 onPredictionSaved={handlePredictionSaved}
+                onGuestPickSaved={handleGuestPickSaved}
                 isLoggedIn={isLoggedIn}
                 expanded={pastPicksExpanded}
                 onExpandedChange={handlePastPicksExpanded}
@@ -660,7 +724,9 @@ export function PicksClient({
                 key={`${event.id}-${eventCard}`}
                 event={event}
                 fights={cardFights}
+                guestDrafts={guestDrafts}
                 onPredictionSaved={handlePredictionSaved}
+                onGuestPickSaved={handleGuestPickSaved}
                 isLoggedIn={isLoggedIn}
                 showExpandPointer={
                   pointerTarget?.kind === "active" &&
@@ -680,7 +746,9 @@ export function PicksClient({
               <PastPicksSection
                 groups={lockedGroups}
                 eventCard={eventCard}
+                guestDrafts={guestDrafts}
                 onPredictionSaved={handlePredictionSaved}
+                onGuestPickSaved={handleGuestPickSaved}
                 isLoggedIn={isLoggedIn}
                 expanded={pastPicksExpanded}
                 onExpandedChange={handlePastPicksExpanded}

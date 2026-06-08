@@ -65,6 +65,18 @@ export async function fetchAllFights(): Promise<Fight[]> {
   return (data ?? []).map((row) => mapFight(row));
 }
 
+export async function fetchFightsByIds(fightIds: string[]): Promise<Fight[]> {
+  if (fightIds.length === 0) return [];
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("fights")
+    .select("*")
+    .in("id", fightIds);
+  if (error) throwQueryError("fights", error);
+  return (data ?? []).map((row) => mapFight(row));
+}
+
 export async function fetchAllFightResults(): Promise<FightResult[]> {
   const supabase = await createClient();
   const { data, error } = await supabase.from("fight_results").select("*");

@@ -24,7 +24,7 @@ export function AppShell({
   showProfileLink = false,
 }: AppShellProps) {
   return (
-    <div className="min-h-dvh w-full pb-24">
+    <div className="min-h-dvh w-full pb-28">
       <main className={cn("pickfist-content", prominentBrand && "pt-0")}>
         {showBrand && (
           <BrandHeader

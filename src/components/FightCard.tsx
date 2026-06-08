@@ -32,6 +32,10 @@ import {
 } from "@/components/picks/pickImpact";
 import { playPickImpactCombo } from "@/lib/audio/playPickImpactSound";
 import { savePredictionAction } from "@/app/actions/picks";
+import {
+  type GuestPickDraft,
+  upsertGuestPick,
+} from "@/lib/picks/guestPickStore";
 import { useRouter } from "next/navigation";
 import { formatPickLine } from "@/lib/profile/display";
 import {
@@ -57,6 +61,8 @@ const METHOD_ROUND_SAVE_DEBOUNCE_MS = 500;
 interface FightCardProps {
   fight: FightWithRelations;
   onPredictionSaved?: (fightId: string, prediction: Prediction) => void;
+  onGuestPickSaved?: (fightId: string, draft: GuestPickDraft) => void;
+  guestDraft?: GuestPickDraft | null;
   /** Picks page only — glove impact on fighter pick buttons */
   enablePickImpact?: boolean;
   isLoggedIn?: boolean;
@@ -210,6 +216,8 @@ function PickChoiceButton({
 export function FightCard({
   fight,
   onPredictionSaved,
+  onGuestPickSaved,
+  guestDraft = null,
   enablePickImpact = false,
   isLoggedIn = true,
 }: FightCardProps) {
@@ -222,21 +230,24 @@ export function FightCard({
     null
   );
 
+  const initialOutcome =
+    existing?.predicted_outcome ?? guestDraft?.predicted_outcome ?? null;
+  const initialMethod =
+    existing?.predicted_method ?? guestDraft?.predicted_method ?? null;
+  const initialRound =
+    existing?.predicted_round ?? guestDraft?.predicted_round ?? null;
+
   const [outcome, setOutcome] = useState<PredictedOutcome | null>(
-    existing?.predicted_outcome ?? null
+    initialOutcome
   );
-  const [method, setMethod] = useState<PredictedMethod | null>(
-    existing?.predicted_method ?? null
-  );
-  const [round, setRound] = useState<number | null>(
-    existing?.predicted_round ?? null
-  );
+  const [method, setMethod] = useState<PredictedMethod | null>(initialMethod);
+  const [round, setRound] = useState<number | null>(initialRound);
   const [advancedOpen, setAdvancedOpen] = useState(
-    Boolean(existing?.predicted_method || existing?.predicted_round)
+    Boolean(initialMethod || initialRound)
   );
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<PickSaveStatus>(
-    existing ? "saved" : "idle"
+    existing ? "saved" : guestDraft ? "guest" : "idle"
   );
   const [impact, setImpact] = useState<PickImpactConfig | null>(null);
   const impactTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -258,14 +269,19 @@ export function FightCard({
   }, []);
 
   useEffect(() => {
-    setOutcome(existing?.predicted_outcome ?? null);
-    setMethod(existing?.predicted_method ?? null);
-    setRound(existing?.predicted_round ?? null);
+    setOutcome(
+      existing?.predicted_outcome ?? guestDraft?.predicted_outcome ?? null
+    );
+    setMethod(existing?.predicted_method ?? guestDraft?.predicted_method ?? null);
+    setRound(existing?.predicted_round ?? guestDraft?.predicted_round ?? null);
     if (existing) {
       setSaveStatus("saved");
       setError(null);
+    } else if (guestDraft) {
+      setSaveStatus("guest");
+      setError(null);
     }
-  }, [existing, fight.id]);
+  }, [existing, guestDraft, fight.id]);
 
   const persistPick = useCallback(
     async (
@@ -276,7 +292,15 @@ export function FightCard({
       if (locked || settled) return;
 
       if (!isLoggedIn) {
-        router.push("/login");
+        const draft = upsertGuestPick({
+          fight_id: fight.id,
+          predicted_outcome: nextOutcome,
+          predicted_method: nextMethod,
+          predicted_round: nextRound,
+        });
+        onGuestPickSaved?.(fight.id, draft);
+        setSaveStatus("guest");
+        setError(null);
         return;
       }
 
@@ -319,6 +343,7 @@ export function FightCard({
       fight.sport,
       isLoggedIn,
       locked,
+      onGuestPickSaved,
       onPredictionSaved,
       router,
       settled,

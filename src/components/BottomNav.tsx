@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { GuestPickBanner } from "@/components/picks/GuestPickBanner";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -19,6 +20,7 @@ export function BottomNav() {
       className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#2a2a2a] bg-[#0a0a0a]/95 backdrop-blur-md"
       aria-label="Main navigation"
     >
+      <GuestPickBanner />
       <div className="pickfist-content flex items-center justify-around py-2 safe-area-pb !max-w-[32rem]">
         {navItems.map((item) => {
           const active =
