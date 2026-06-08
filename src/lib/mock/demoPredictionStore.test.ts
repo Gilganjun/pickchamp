@@ -1,10 +1,19 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MOCK_USER_ID } from "@/data/mock";
+
+vi.mock("@/lib/config", () => ({
+  usesLiveSupabase: () => false,
+}));
+
 import {
   clearDemoPredictions,
   getDemoPredictionsForUser,
   upsertDemoPrediction,
 } from "./demoPredictionStore";
+
+beforeEach(() => {
+  clearDemoPredictions();
+});
 
 afterEach(() => {
   clearDemoPredictions();
