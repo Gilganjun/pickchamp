@@ -318,7 +318,7 @@ export function CurrentPicksSection({
               </Link>
             </>
           ) : (
-            <p className="text-sm text-zinc-400">No locked picks to show yet.</p>
+            <p className="text-sm text-zinc-400">No current picks to show yet.</p>
           )}
         </div>
       ) : (

@@ -1,8 +1,13 @@
+import { ProfileSectionHeading } from "@/components/profile/ProfileSectionHeading";
 import { CurrentPicksSection } from "@/components/profile/CurrentPicksSection";
 import { DetailedStatsSection } from "@/components/profile/DetailedStatsSection";
 import { ProfileHero } from "@/components/profile/ProfileHero";
 import { RecentPredictionCard } from "@/components/profile/RecentPredictionCard";
 import { SportRankingsSection } from "@/components/profile/SportRankingsSection";
+import {
+  buildPickRecordItems,
+  getPickRecordCounts,
+} from "@/lib/pickRecord/pickRecord";
 import {
   getCurrentPickItems,
   getGlobalAccuracy,
@@ -38,6 +43,10 @@ export function ProfilePageContent({
     currentPicks.length === 0 &&
     hasHiddenOpenPicksOnPublicProfile(predictions, fights);
 
+  const pickRecordCounts = isOwnProfile
+    ? getPickRecordCounts(buildPickRecordItems(predictions, fights))
+    : null;
+
   const gradedRecent = [...predictions]
     .filter((p) => p.graded_at)
     .sort(
@@ -54,6 +63,7 @@ export function ProfilePageContent({
         predictions={predictions}
         fights={fights}
         accuracy={accuracy}
+        pickRecordCounts={isOwnProfile ? pickRecordCounts : null}
       />
 
       <CurrentPicksSection
@@ -71,10 +81,8 @@ export function ProfilePageContent({
 
       {showRecentPredictions && (
         <section>
-          <h2 className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-            Recent Results
-          </h2>
-          <div className="mt-2 space-y-2">
+          <ProfileSectionHeading>Recent Results</ProfileSectionHeading>
+          <div className="space-y-2">
             {gradedRecent.length === 0 ? (
               <p className="rounded-lg border border-[#2a2a2a] bg-[#111111] px-3 py-2.5 text-xs text-zinc-500">
                 No graded predictions yet.

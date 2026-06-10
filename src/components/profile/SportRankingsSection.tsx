@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef } from "react";
+import { ProfileSectionHeading } from "@/components/profile/ProfileSectionHeading";
 import { SportBreakdownCard } from "@/components/profile/SportBreakdownCard";
 import type { FightWithRelations, Prediction, Profile } from "@/types";
 import type { getProfileRanks } from "@/lib/data/profiles";
@@ -30,9 +31,7 @@ export function SportRankingsSection({
       ref={sectionRef}
       className="scroll-mt-3"
     >
-      <h2 className="mb-2.5 text-[11px] font-bold uppercase tracking-wider text-zinc-400">
-        Sport Rankings
-      </h2>
+      <ProfileSectionHeading>Sport Rankings</ProfileSectionHeading>
       <div className="grid grid-cols-2 gap-2">
         <div
           role="button"

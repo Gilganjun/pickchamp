@@ -1,12 +1,15 @@
 import { WorldGlobeIcon } from "@/components/profile/WorldGlobeIcon";
+import { WorldRankInTheWorldBadge } from "@/components/profile/WorldRankInTheWorldBadge";
 import { formatPicksToQualifyLabel } from "@/lib/profile/display";
 import type { GlobalRankHeroState } from "@/lib/profile/display";
 import { cn } from "@/lib/utils";
+import type { Sport } from "@/types";
 
 interface WorldRankDisplayProps {
   state: GlobalRankHeroState;
   label: string;
   variant?: "hero" | "compact" | "sport";
+  sport?: Sport;
   className?: string;
 }
 
@@ -14,6 +17,7 @@ export function WorldRankDisplay({
   state,
   label,
   variant = "compact",
+  sport,
   className,
 }: WorldRankDisplayProps) {
   const isHero = variant === "hero";
@@ -71,9 +75,12 @@ export function WorldRankDisplay({
       ) : (
         <div className="min-w-0">
           {state.kind === "official" ? (
-            <p className="font-[family-name:var(--font-teko)] text-2xl font-bold tabular-nums leading-none text-white">
-              #{state.rank.toLocaleString()}
-            </p>
+            <div className="flex flex-wrap items-end gap-1">
+              <p className="font-[family-name:var(--font-teko)] text-2xl font-bold tabular-nums leading-none text-white">
+                #{state.rank.toLocaleString()}
+              </p>
+              {sport ? <WorldRankInTheWorldBadge sport={sport} /> : null}
+            </div>
           ) : state.kind === "waiting_results" ? (
             <>
               <p className="text-xs font-black uppercase tracking-wide text-[#d4a853]">

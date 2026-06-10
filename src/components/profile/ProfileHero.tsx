@@ -13,7 +13,9 @@ import {
   getPickFistScoreDisplay,
   getRatingTier,
 } from "@/lib/profile/ratingTiers";
+import { PickRecordHeroButton } from "@/components/profile/PickRecordHeroButton";
 import { cn } from "@/lib/utils";
+import type { PickRecordCounts } from "@/lib/pickRecord/pickRecord";
 import type { FightWithRelations, Profile, Prediction, RankDisplay } from "@/types";
 
 interface ProfileHeroProps {
@@ -22,6 +24,7 @@ interface ProfileHeroProps {
   predictions: Prediction[];
   fights: FightWithRelations[];
   accuracy: number;
+  pickRecordCounts?: PickRecordCounts | null;
 }
 
 export function ProfileHero({
@@ -30,6 +33,7 @@ export function ProfileHero({
   predictions,
   fights,
   accuracy,
+  pickRecordCounts = null,
 }: ProfileHeroProps) {
   const initials =
     profile.avatar_initials ?? profile.username.slice(0, 2).toUpperCase();
@@ -46,10 +50,15 @@ export function ProfileHero({
   return (
     <section className="rounded-xl border border-[#2a2a2a] bg-gradient-to-br from-[#181818] to-[#111111] p-3">
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h1 className="truncate text-sm font-bold text-white">
-            @{profile.username}
-          </h1>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <h1 className="truncate text-sm font-bold text-white">
+              @{profile.username}
+            </h1>
+            {pickRecordCounts ? (
+              <PickRecordHeroButton counts={pickRecordCounts} />
+            ) : null}
+          </div>
           <p className="font-[family-name:var(--font-teko)] text-2xl font-bold uppercase leading-none tracking-wide text-[#d4a853]">
             {levelName}
           </p>

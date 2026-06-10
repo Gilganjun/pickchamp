@@ -94,7 +94,12 @@ export function SportBreakdownCard({
         />
 
         <div className="mt-2.5">
-          <WorldRankDisplay state={rankState} label="" variant="sport" />
+          <WorldRankDisplay
+            state={rankState}
+            label=""
+            variant="sport"
+            sport={sport}
+          />
         </div>
 
         <div className="mt-2.5 flex items-center gap-1.5 border-t border-white/5 pt-2.5">
@@ -148,7 +153,12 @@ export function SportBreakdownCard({
       />
 
       <div className="mt-3">
-        <WorldRankDisplay state={rankState} label="" variant="sport" />
+        <WorldRankDisplay
+          state={rankState}
+          label=""
+          variant="sport"
+          sport={sport}
+        />
       </div>
 
       <div className="mt-3 flex items-center gap-2">
