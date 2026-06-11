@@ -64,7 +64,7 @@ const MARKET_ALIGNED: Record<
   "fight-045": { favourite_side: "fighterA", favourite_level: "favourite" }, // Mehmood 2-0 vs Tananta 5-9
   "fight-046": { favourite_side: "fighterA", favourite_level: "heavy_favourite" }, // Ali 8-0 vs Meanwell 2-41-1
   "fight-047": { favourite_side: "fighterA", favourite_level: "heavy_favourite" }, // Ketteringham 2-0 vs Naeem Ali 3-154-1
-  // Rodriguez vs. Vargas — Matchroom, Desert Diamond Arena (13 Jun 2026)
+  // Bam Rodriguez vs. Vargas — Matchroom, Desert Diamond Arena (13 Jun 2026)
   "fight-048": { favourite_side: "fighterB", favourite_level: "favourite" }, // Rodriguez 23-0 #12 vs Vargas 19-1-1
   "fight-049": { favourite_side: "fighterA", favourite_level: "favourite" }, // Cardenas 17-0-2 #22 vs Martinez 16-0-1
   "fight-050": { favourite_side: "fighterB", favourite_level: "favourite" }, // Terraza 13-0 vs Adrian Rodriguez 10-0
@@ -214,6 +214,22 @@ const MARKET_ALIGNED: Record<
   "fight-178": { favourite_side: "fighterA", favourite_level: "favourite" }, // Ruffy -700 vs Chandler +500
   "fight-179": { favourite_side: "fighterA", favourite_level: "favourite" }, // Nickal -300 vs Daukaus +240
   "fight-180": { favourite_side: "fighterA", favourite_level: "favourite" }, // Lopes vs Garcia
+  // Battle of the Legends — Mayweather vs. Zambidis (27 Jun 2026, Athens; odds TBA)
+  "fight-181": { favourite_side: "fighterA", favourite_level: "favourite" }, // Beltekos vs Stroubis
+  "fight-182": { favourite_side: "fighterA", favourite_level: "favourite" }, // Tsamalidis vs Malichoudis
+  "fight-183": { favourite_side: "fighterB", favourite_level: "favourite" }, // Tsakouridis vs Rojkou (WBF Intl)
+  "fight-184": { favourite_side: "fighterA", favourite_level: "favourite" }, // Tryfylli vs Marjanovic
+  "fight-185": { favourite_side: "fighterA", favourite_level: "favourite" }, // Plateias vs Essomba
+  "fight-186": { favourite_side: "fighterA", favourite_level: "favourite" }, // Avramidis vs Tavladakis (KB)
+  "fight-187": { favourite_side: "fighterB", favourite_level: "favourite" }, // Kyriakidis vs Nosrati (KB)
+  "fight-188": { favourite_side: "fighterB", favourite_level: "favourite" }, // Kolokythas vs Koutsodimos (MMA)
+  "fight-189": { favourite_side: "fighterA", favourite_level: "favourite" }, // Bakirtzis vs Daines (Muay Thai)
+  "fight-190": { favourite_side: "fighterB", favourite_level: "favourite" }, // Janchira vs Burgos Lopez (Muay Thai)
+  "fight-191": { favourite_side: "fighterA", favourite_level: "favourite" }, // Kurugliev vs Kougioumtsidis (wrestling)
+  "fight-192": { favourite_side: "fighterB", favourite_level: "favourite" }, // Potieria vs Zepeda (TMT HW)
+  "fight-193": { favourite_side: "fighterA", favourite_level: "favourite" }, // Brown vs Sopranidis (TMT)
+  "fight-194": { favourite_side: "fighterA", favourite_level: "favourite" }, // Pudivitr vs Angulo (WBC Intl Silver)
+  "fight-195": { favourite_side: "fighterA", favourite_level: "heavy_favourite" }, // Mayweather exhibition
 };
 
 describe("mock favourite alignment with market odds sheets", () => {

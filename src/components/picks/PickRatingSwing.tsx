@@ -78,11 +78,7 @@ function RatingSwingSummary({
   round: number | null;
 }) {
   if (!potential) {
-    return (
-      <p className="mt-3 text-center text-xs text-zinc-500">
-        Select a fighter above to see rating swing
-      </p>
-    );
+    return null;
   }
 
   const winCeiling = getPotentialWinCeiling(potential);
@@ -531,12 +527,16 @@ export function PickLockSection({
   onRetrySave?: () => void;
 }) {
   const methodHint = formatMethodRoundHint(method, round);
-  const showPick =
+  const hasActivePick =
     hasSaved || (showDraft && pickName) || saveStatus === "saving";
+
+  if (!hasActivePick) {
+    return null;
+  }
 
   return (
     <div className="px-4 py-4">
-      {showPick && pickName ? (
+      {pickName ? (
         <>
           <PickSectionHeader
             label={hasSaved ? "Your current pick" : "Your pick"}
@@ -558,17 +558,7 @@ export function PickLockSection({
           </p>
           <p className="mt-2 text-[11px] text-zinc-400">{methodHint}</p>
         </>
-      ) : (
-        <>
-          <PickSectionHeader
-            label="Your current pick"
-            labelClassName="text-zinc-500"
-          />
-          <p className="mt-1 text-sm text-zinc-500">
-            None yet — select a fighter above
-          </p>
-        </>
-      )}
+      ) : null}
 
       <RatingSwingSummary
         potential={potential}

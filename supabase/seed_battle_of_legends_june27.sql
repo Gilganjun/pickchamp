@@ -1,0 +1,25 @@
+-- Battle of the Legends — Mayweather vs. Zambidis (27 Jun 2026, Athens)
+-- DAZN PPV crossover card: boxing, kickboxing, Muay Thai, MMA, wrestling.
+-- Safe to re-run: ON CONFLICT DO NOTHING.
+
+insert into public.events (id, name, promotion, location, timezone, event_date, card_tier, created_at, updated_at) values
+  ('e0000023-0023-4000-a000-000000000023','Mayweather vs. Zambidis','Battle of the Legends','Telekom Center Athens, OAKA Olympic Complex, Athens, Greece','Europe/Athens','2026-06-27T17:00:00.000Z','featured','2026-06-10T12:00:00.000Z','2026-06-10T12:00:00.000Z')
+on conflict (id) do nothing;
+
+insert into public.fights (id, event_id, sport, fighter_a_name, fighter_b_name, scheduled_rounds, weight_class, fight_order, lock_time, status, favourite_side, favourite_level, created_at, updated_at) values
+  ('f0000197-0197-4000-b000-000000000197','e0000023-0023-4000-a000-000000000023','boxing','Floyd Mayweather Jr.','Mike Zambidis','8','Super Welterweight','1','2026-06-27T20:00:00.000Z','upcoming','fighterA','heavy_favourite','2026-06-10T12:00:00.000Z','2026-06-10T12:00:00.000Z'),
+  ('f0000196-0196-4000-b000-000000000196','e0000023-0023-4000-a000-000000000023','boxing','Octávio Pudivitr','Roamer Alexis Angulo','12','Cruiserweight','2','2026-06-27T20:00:00.000Z','upcoming','fighterA','favourite','2026-06-10T12:00:00.000Z','2026-06-10T12:00:00.000Z'),
+  ('f0000194-0194-4000-b000-000000000194','e0000023-0023-4000-a000-000000000023','boxing','Ihor Potieria','Antonio Zepeda','8','Heavyweight','3','2026-06-27T20:00:00.000Z','upcoming','fighterB','favourite','2026-06-10T12:00:00.000Z','2026-06-10T12:00:00.000Z'),
+  ('f0000195-0195-4000-b000-000000000195','e0000023-0023-4000-a000-000000000023','boxing','Joseph Brown','Leonidas Sopranidis','8','Super Welterweight','4','2026-06-27T20:00:00.000Z','upcoming','fighterA','favourite','2026-06-10T12:00:00.000Z','2026-06-10T12:00:00.000Z'),
+  ('f0000183-0183-4000-b000-000000000183','e0000023-0023-4000-a000-000000000023','boxing','Alexandros Beltekos','Dionysis Stroubis','6','Welterweight','5','2026-06-27T17:00:00.000Z','upcoming','fighterA','favourite','2026-06-10T12:00:00.000Z','2026-06-10T12:00:00.000Z'),
+  ('f0000184-0184-4000-b000-000000000184','e0000023-0023-4000-a000-000000000023','boxing','Michalis Tsamalidis','Charilis Malichoudis','8','Light Heavyweight','6','2026-06-27T17:00:00.000Z','upcoming','fighterA','favourite','2026-06-10T12:00:00.000Z','2026-06-10T12:00:00.000Z'),
+  ('f0000185-0185-4000-b000-000000000185','e0000023-0023-4000-a000-000000000023','boxing','Odysseas Tsakouridis','Gelian Rojkou','10','Cruiserweight','7','2026-06-27T17:00:00.000Z','upcoming','fighterB','favourite','2026-06-10T12:00:00.000Z','2026-06-10T12:00:00.000Z'),
+  ('f0000186-0186-4000-b000-000000000186','e0000023-0023-4000-a000-000000000023','boxing','Anna Maria Tryfylli','Sara Marjanovic','8','Women''s Featherweight','8','2026-06-27T17:00:00.000Z','upcoming','fighterA','favourite','2026-06-10T12:00:00.000Z','2026-06-10T12:00:00.000Z'),
+  ('f0000187-0187-4000-b000-000000000187','e0000023-0023-4000-a000-000000000023','boxing','Konstantinos Plateias','Michael Essomba','8','Heavyweight','9','2026-06-27T17:00:00.000Z','upcoming','fighterA','favourite','2026-06-10T12:00:00.000Z','2026-06-10T12:00:00.000Z'),
+  ('f0000188-0188-4000-b000-000000000188','e0000023-0023-4000-a000-000000000023','mma','Christos Avramidis','Nikos Tavladakis','3','Kickboxing','10','2026-06-27T17:00:00.000Z','upcoming','fighterA','favourite','2026-06-10T12:00:00.000Z','2026-06-10T12:00:00.000Z'),
+  ('f0000189-0189-4000-b000-000000000189','e0000023-0023-4000-a000-000000000023','mma','Valentinos Kyriakidis','Omid Nosrati','3','Kickboxing','11','2026-06-27T17:00:00.000Z','upcoming','fighterB','favourite','2026-06-10T12:00:00.000Z','2026-06-10T12:00:00.000Z'),
+  ('f0000190-0190-4000-b000-000000000190','e0000023-0023-4000-a000-000000000023','mma','Kostas Kolokythas','Aris Koutsodimos','3','Middleweight','12','2026-06-27T17:00:00.000Z','upcoming','fighterB','favourite','2026-06-10T12:00:00.000Z','2026-06-10T12:00:00.000Z'),
+  ('f0000191-0191-4000-b000-000000000191','e0000023-0023-4000-a000-000000000023','mma','Kyriakos Bakirtzis','Charli Daines','3','Muay Thai','13','2026-06-27T17:00:00.000Z','upcoming','fighterA','favourite','2026-06-10T12:00:00.000Z','2026-06-10T12:00:00.000Z'),
+  ('f0000192-0192-4000-b000-000000000192','e0000023-0023-4000-a000-000000000023','mma','Parunai Janchira','Laura Fernanda Burgos Lopez','3','Muay Thai','14','2026-06-27T17:00:00.000Z','upcoming','fighterB','favourite','2026-06-10T12:00:00.000Z','2026-06-10T12:00:00.000Z'),
+  ('f0000193-0193-4000-b000-000000000193','e0000023-0023-4000-a000-000000000023','mma','Dauren Kurugliev','Giorgos Kougioumtsidis','3','Freestyle Wrestling','15','2026-06-27T17:00:00.000Z','upcoming','fighterA','favourite','2026-06-10T12:00:00.000Z','2026-06-10T12:00:00.000Z')
+on conflict (id) do nothing;

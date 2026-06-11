@@ -7,7 +7,7 @@ insert into public.events (id, name, promotion, location, timezone, event_date, 
   ('e0000003-0003-4000-a000-000000000003','Zuffa Boxing 7','Zuffa Boxing','Bournemouth International Centre, Bournemouth, UK','Europe/London','2026-06-06T16:00:00.000Z','2026-05-15T12:00:00.000Z','2026-06-01T12:00:00.000Z'),
   ('e0000004-0004-4000-a000-000000000004','Fury vs. Hall: Beauty vs. The Beast','Misfits Boxing','AO Arena, Manchester, UK','Europe/London','2026-06-13T17:00:00.000Z','2026-05-15T12:00:00.000Z','2026-06-06T12:00:00.000Z'),
   ('e0000005-0005-4000-a000-000000000005','Hawley vs. Steward','Warren Boxing Management','York Hall, Bethnal Green, London, UK','Europe/London','2026-06-13T16:00:00.000Z','2026-05-15T12:00:00.000Z','2026-06-06T12:00:00.000Z'),
-  ('e0000006-0006-4000-a000-000000000006','Rodriguez vs. Vargas','Matchroom Boxing','Desert Diamond Arena, Glendale, Arizona, USA','America/Phoenix','2026-06-14T00:00:00.000Z','2026-05-15T12:00:00.000Z','2026-06-06T12:00:00.000Z'),
+  ('e0000006-0006-4000-a000-000000000006','Bam Rodriguez vs. Vargas','Matchroom Boxing','Desert Diamond Arena, Glendale, Arizona, USA','America/Phoenix','2026-06-14T00:00:00.000Z','2026-05-15T12:00:00.000Z','2026-06-06T12:00:00.000Z'),
   ('e0000007-0007-4000-a000-000000000007','MVPW-04','Most Valuable Promotions','Caribe Royale Orlando, Orlando, Florida, USA','America/New_York','2026-06-13T22:00:00.000Z','2026-05-15T12:00:00.000Z','2026-06-06T12:00:00.000Z'),
   ('e0000008-0008-4000-a000-000000000008','Gonzalez vs. Perez','Salita Promotions','GLC Live at 20 Monroe, Grand Rapids, Michigan, USA','America/Detroit','2026-06-14T22:00:00.000Z','2026-05-15T12:00:00.000Z','2026-06-06T12:00:00.000Z'),
   ('e0000009-0009-4000-a000-000000000009','Pugilist Revolution','MF Pro','Thunder Studios, Long Beach, California, USA','America/Los_Angeles','2026-06-20T00:00:00.000Z','2026-05-15T12:00:00.000Z','2026-06-06T12:00:00.000Z'),
@@ -23,7 +23,8 @@ insert into public.events (id, name, promotion, location, timezone, event_date, 
   ('e0000019-0019-4000-a000-000000000019','Pascal vs. Lafreniere','New Era Sports & Entertainment','Colisee de Laval, Laval, Canada','America/Toronto','2026-06-27T23:00:00.000Z','2026-05-15T12:00:00.000Z','2026-06-06T12:00:00.000Z'),
   ('e0000020-0020-4000-a000-000000000020','Zachenhuber vs. Ajrulai','German Boxing Series','Strassenkicker Base, Cologne, Germany','Europe/Berlin','2026-06-27T14:00:00.000Z','2026-05-15T12:00:00.000Z','2026-06-06T12:00:00.000Z'),
   ('e0000021-0021-4000-a000-000000000021','Zayas vs. Ennis','Matchroom Boxing','Barclays Center, Brooklyn, New York, USA','America/New_York','2026-06-28T00:00:00.000Z','2026-05-15T12:00:00.000Z','2026-06-06T12:00:00.000Z'),
-  ('e0000022-0022-4000-a000-000000000022','UFC Freedom 250: Topuria vs. Gaethje','UFC','The White House, Washington, D.C., USA','America/New_York','2026-06-15T00:00:00.000Z','2026-06-06T12:00:00.000Z','2026-06-06T12:00:00.000Z')
+  ('e0000022-0022-4000-a000-000000000022','UFC Freedom 250: Topuria vs. Gaethje','UFC','The White House, Washington, D.C., USA','America/New_York','2026-06-15T00:00:00.000Z','2026-06-06T12:00:00.000Z','2026-06-06T12:00:00.000Z'),
+  ('e0000023-0023-4000-a000-000000000023','Mayweather vs. Zambidis','Battle of the Legends','Telekom Center Athens, OAKA Olympic Complex, Athens, Greece','Europe/Athens','2026-06-27T17:00:00.000Z','2026-06-10T12:00:00.000Z','2026-06-10T12:00:00.000Z')
 on conflict (id) do nothing;
 
 insert into public.fights (id, event_id, sport, fighter_a_name, fighter_b_name, scheduled_rounds, weight_class, fight_order, lock_time, status, favourite_side, favourite_level, created_at, updated_at) values

@@ -11,7 +11,9 @@ import {
   buildExportSummaryStats,
   buildPickRecordExportSections,
   buildPickRecordExportText,
-  formatExportOutcomeText,
+  buildStatChipLabels,
+  formatPastOutcomeLine,
+  groupExportItemsByEvent,
 } from "./exportPickRecord";
 import type { Event, FightWithRelations, Prediction, Profile } from "@/types";
 
@@ -272,16 +274,24 @@ describe("pickRecord export text", () => {
     });
 
     expect(text).toContain("PICKFIST PICK RECORD");
-    expect(text).toContain("Test User (@tester)");
+    expect(text).toContain("@tester");
     expect(text).toContain("Export type: PAST PICKS");
     expect(text).toContain("PAST PICKS");
-    expect(text).toContain("Total picks: 1");
-    expect(text).toContain("DATE");
-    expect(text).toContain("MATCHUP");
-    expect(text).toContain("OUTCOME");
+    expect(text).toContain("1 PICKS");
+    expect(text).toContain("1 PAST");
+    expect(text).toContain("100% ACCURACY");
+    expect(text).toContain("STEEL CITY KING");
     expect(text).toContain("Padley vs Fiaz");
-    expect(text).toContain("WON +10");
-    expect(formatExportOutcomeText(items[0]!)).toBe("WON +10");
+    expect(text).toContain("Pick:");
+    expect(text).toContain("Result:");
+    expect(text).toContain("+10 · Won");
+    expect(formatPastOutcomeLine(items[0]!)).toBe("+10 · Won");
+    expect(buildStatChipLabels(buildExportSummaryStats(items))).toEqual([
+      "1 PICKS",
+      "0 FUTURE",
+      "1 PAST",
+      "100% ACCURACY",
+    ]);
   });
 
   it("splits all picks export into FUTURE PICKS and PAST PICKS sections", () => {
@@ -317,15 +327,22 @@ describe("pickRecord export text", () => {
     expect(text).toContain("FUTURE PICKS");
     expect(text).toContain("PAST PICKS");
     expect(text.indexOf("FUTURE PICKS")).toBeLessThan(text.indexOf("PAST PICKS"));
-    expect(text).toContain("YOUR PICK");
-    expect(text).toContain("STATUS");
-    expect(text).toContain("OUTCOME");
+    expect(text).toContain("Pick:");
+    expect(text).toContain("Result:");
+    expect(text).not.toContain("PENDING");
+    expect(groupExportItemsByEvent(items)).toHaveLength(2);
     expect(buildExportSummaryStats(items)).toEqual({
       total: 2,
       future: 1,
       past: 1,
       accuracy: "0%",
     });
+    expect(buildStatChipLabels(buildExportSummaryStats(items))).toEqual([
+      "2 PICKS",
+      "1 FUTURE",
+      "1 PAST",
+      "0% ACCURACY",
+    ]);
   });
 
   it("builds future export with a FUTURE PICKS section heading", () => {
@@ -341,8 +358,10 @@ describe("pickRecord export text", () => {
 
     expect(text).toContain("Export type: FUTURE PICKS");
     expect(text).toContain("FUTURE PICKS");
-    expect(text).toContain("PENDING");
-    expect(text).toContain("EVENT");
-    expect(text).toContain("BOXING · Upcoming Card");
+    expect(text).not.toContain("PENDING");
+    expect(text).toContain("BOXING");
+    expect(text).toContain("UPCOMING CARD");
+    expect(text).toContain("Pick:");
+    expect(groupExportItemsByEvent(items)).toHaveLength(1);
   });
 });

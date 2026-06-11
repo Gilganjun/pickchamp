@@ -656,29 +656,31 @@ export function FightCard({
             </div>
           </div>
 
-          <div className="mt-4 overflow-hidden rounded-xl border border-[#2a2a2a] bg-[#181818]">
-            <PickLockSection
-              hasSaved={Boolean(existing)}
-              savedLine={
-                existing
-                  ? formatPickLine(
-                      fight,
-                      existing.predicted_outcome,
-                      existing.predicted_method,
-                      existing.predicted_round
-                    )
-                  : null
-              }
-              pickName={getPickFighterName(fight, outcome)}
-              method={method}
-              round={round}
-              potential={activePotential}
-              showDraft={Boolean(outcome)}
-              saveStatus={saveStatus}
-              saveError={error}
-              onRetrySave={retrySave}
-            />
-          </div>
+          {(existing || outcome || saveStatus === "saving") && (
+            <div className="mt-4 overflow-hidden rounded-xl border border-[#2a2a2a] bg-[#181818]">
+              <PickLockSection
+                hasSaved={Boolean(existing)}
+                savedLine={
+                  existing
+                    ? formatPickLine(
+                        fight,
+                        existing.predicted_outcome,
+                        existing.predicted_method,
+                        existing.predicted_round
+                      )
+                    : null
+                }
+                pickName={getPickFighterName(fight, outcome)}
+                method={method}
+                round={round}
+                potential={activePotential}
+                showDraft={Boolean(outcome)}
+                saveStatus={saveStatus}
+                saveError={error}
+                onRetrySave={retrySave}
+              />
+            </div>
+          )}
 
           <div className="mt-3">
             <AdvancedPredictionPanel

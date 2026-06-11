@@ -1,8 +1,8 @@
--- Rodriguez vs. Vargas — Matchroom Boxing, Desert Diamond Arena (13 Jun 2026)
+-- Bam Rodriguez vs. Vargas — Matchroom Boxing, Desert Diamond Arena (13 Jun 2026)
 -- Run on an EXISTING production database. Safe to re-run: ON CONFLICT DO NOTHING.
 
 insert into public.events (id, name, promotion, location, timezone, event_date, created_at, updated_at) values
-  ('e0000006-0006-4000-a000-000000000006','Rodriguez vs. Vargas','Matchroom Boxing','Desert Diamond Arena, Glendale, Arizona, USA','America/Phoenix','2026-06-14T00:00:00.000Z','2026-05-15T12:00:00.000Z','2026-06-06T12:00:00.000Z')
+  ('e0000006-0006-4000-a000-000000000006','Bam Rodriguez vs. Vargas','Matchroom Boxing','Desert Diamond Arena, Glendale, Arizona, USA','America/Phoenix','2026-06-14T00:00:00.000Z','2026-05-15T12:00:00.000Z','2026-06-06T12:00:00.000Z')
 on conflict (id) do nothing;
 
 insert into public.fights (id, event_id, sport, fighter_a_name, fighter_b_name, scheduled_rounds, weight_class, fight_order, lock_time, status, favourite_side, favourite_level, created_at, updated_at) values
