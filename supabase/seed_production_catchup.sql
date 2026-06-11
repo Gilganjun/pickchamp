@@ -367,8 +367,8 @@ on conflict (id) do nothing;
 -- Battle of the Legends — Mayweather vs. Zambidis (27 Jun 2026, Athens)
 -- Run on an EXISTING production database. Safe to re-run: ON CONFLICT DO NOTHING.
 
-insert into public.events (id, name, promotion, location, timezone, event_date, card_tier, created_at, updated_at) values
-  ('e0000023-0023-4000-a000-000000000023','Mayweather vs. Zambidis','Battle of the Legends','Telekom Center Athens, OAKA Olympic Complex, Athens, Greece','Europe/Athens','2026-06-27T17:00:00.000Z','featured','2026-06-10T12:00:00.000Z','2026-06-10T12:00:00.000Z')
+insert into public.events (id, name, promotion, location, timezone, event_date, created_at, updated_at) values
+  ('e0000023-0023-4000-a000-000000000023','Mayweather vs. Zambidis','Battle of the Legends','Telekom Center Athens, OAKA Olympic Complex, Athens, Greece','Europe/Athens','2026-06-27T17:00:00.000Z','2026-06-10T12:00:00.000Z','2026-06-10T12:00:00.000Z')
 on conflict (id) do nothing;
 
 insert into public.fights (id, event_id, sport, fighter_a_name, fighter_b_name, scheduled_rounds, weight_class, fight_order, lock_time, status, favourite_side, favourite_level, created_at, updated_at) values

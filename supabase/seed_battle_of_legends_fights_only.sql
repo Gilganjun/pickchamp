@@ -1,10 +1,6 @@
--- Battle of the Legends — Mayweather vs. Zambidis (27 Jun 2026, Athens)
--- DAZN PPV crossover card: boxing, kickboxing, Muay Thai, MMA, wrestling.
+-- Battle of the Legends — insert fights only (event e0000023 already exists).
+-- Run this if the card shows "0 fights" on production.
 -- Safe to re-run: ON CONFLICT DO NOTHING.
-
-insert into public.events (id, name, promotion, location, timezone, event_date, created_at, updated_at) values
-  ('e0000023-0023-4000-a000-000000000023','Mayweather vs. Zambidis','Battle of the Legends','Telekom Center Athens, OAKA Olympic Complex, Athens, Greece','Europe/Athens','2026-06-27T17:00:00.000Z','2026-06-10T12:00:00.000Z','2026-06-10T12:00:00.000Z')
-on conflict (id) do nothing;
 
 insert into public.fights (id, event_id, sport, fighter_a_name, fighter_b_name, scheduled_rounds, weight_class, fight_order, lock_time, status, favourite_side, favourite_level, created_at, updated_at) values
   ('f0000197-0197-4000-b000-000000000197','e0000023-0023-4000-a000-000000000023','boxing','Floyd Mayweather Jr.','Mike Zambidis','8','Super Welterweight','1','2026-06-27T20:00:00.000Z','upcoming','fighterA','heavy_favourite','2026-06-10T12:00:00.000Z','2026-06-10T12:00:00.000Z'),

@@ -1,4 +1,5 @@
 import { ProfileSectionHeading } from "@/components/profile/ProfileSectionHeading";
+import { SubscriptionTrialNotice } from "@/components/profile/SubscriptionTrialNotice";
 import { CurrentPicksSection } from "@/components/profile/CurrentPicksSection";
 import { DetailedStatsSection } from "@/components/profile/DetailedStatsSection";
 import { ProfileHero } from "@/components/profile/ProfileHero";
@@ -57,6 +58,8 @@ export function ProfilePageContent({
 
   return (
     <div className="pickfist-content mx-auto w-full max-w-lg space-y-4 pb-4">
+      {isOwnProfile ? <SubscriptionTrialNotice profile={profile} /> : null}
+
       <ProfileHero
         profile={profile}
         rank={ranks.global}
