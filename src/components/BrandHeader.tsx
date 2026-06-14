@@ -10,6 +10,8 @@ interface BrandHeaderProps {
   /** Center logo + tagline within the content column (Picks page) */
   centered?: boolean;
   showProfileLink?: boolean;
+  /** Optional control in the top-right (e.g. log out on profile). */
+  trailing?: React.ReactNode;
 }
 
 function ProfileIcon() {
@@ -34,6 +36,7 @@ export function BrandHeader({
   prominent = false,
   centered = false,
   showProfileLink = false,
+  trailing,
 }: BrandHeaderProps) {
   return (
     <header
@@ -47,7 +50,9 @@ export function BrandHeader({
             : "pt-5 pb-2"
       )}
     >
-      {showProfileLink ? (
+      {trailing ? (
+        <div className="absolute right-0 top-3 sm:top-4">{trailing}</div>
+      ) : showProfileLink ? (
         <Link
           href="/profile"
           className="absolute right-0 top-3 flex h-10 w-10 items-center justify-center rounded-full text-zinc-300 transition-colors hover:bg-white/5 hover:text-white sm:top-4"

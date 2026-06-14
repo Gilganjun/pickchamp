@@ -16,7 +16,7 @@ export function SubscriptionTrialNotice({ profile }: SubscriptionTrialNoticeProp
       <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#d4a853]/80">
         Subscription type
       </p>
-      <p className="mt-1 font-[family-name:var(--font-teko)] text-xl font-bold uppercase leading-tight tracking-wide text-white">
+      <p className="mt-1 font-[family-name:var(--font-teko)] text-base font-bold uppercase leading-snug tracking-wide text-white sm:text-lg">
         1 Month Free Trial
         <span className="mx-1.5 text-[#d4a853]">·</span>
         <span className="text-[#d4a853]">Unlimited picks</span>

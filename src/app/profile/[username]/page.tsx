@@ -23,7 +23,7 @@ export default async function PublicProfilePage({
   const fights = await getFightsForProfile(profile.id);
 
   return (
-    <AppShell showBrand={false} showTagline={false}>
+    <AppShell showTagline={false} centeredBrand>
       <ProfilePageContent
         profile={profile}
         ranks={ranks}

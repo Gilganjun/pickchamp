@@ -12,6 +12,7 @@ interface AppShellProps {
   prominentBrand?: boolean;
   centeredBrand?: boolean;
   showProfileLink?: boolean;
+  headerTrailing?: React.ReactNode;
 }
 
 export function AppShell({
@@ -22,6 +23,7 @@ export function AppShell({
   prominentBrand = false,
   centeredBrand = false,
   showProfileLink = false,
+  headerTrailing,
 }: AppShellProps) {
   return (
     <div className="min-h-dvh w-full pb-28">
@@ -32,6 +34,7 @@ export function AppShell({
             prominent={prominentBrand}
             centered={prominentBrand || centeredBrand}
             showProfileLink={showProfileLink}
+            trailing={headerTrailing}
           />
         )}
         {children}

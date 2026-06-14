@@ -56,10 +56,11 @@ export default async function ProfilePage() {
     const fights = await getFightsForProfile(user.id);
 
     return (
-      <AppShell showBrand={false} showTagline={false}>
-        <div className="pickfist-content mx-auto flex w-full max-w-lg justify-end px-1">
-          <LogoutButton />
-        </div>
+      <AppShell
+        showTagline={false}
+        centeredBrand
+        headerTrailing={<LogoutButton />}
+      >
         <ProfilePageContent
           profile={profile}
           ranks={ranks}
@@ -90,7 +91,7 @@ export default async function ProfilePage() {
   const fights = await getFightsForProfile(MOCK_USER_ID);
 
   return (
-    <AppShell showBrand={false} showTagline={false}>
+    <AppShell showTagline={false} centeredBrand>
       <ProfilePageContent
         profile={profile}
         ranks={ranks}
