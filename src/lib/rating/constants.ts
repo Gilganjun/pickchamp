@@ -11,6 +11,9 @@ export const PERFECT_PICK_BONUS = 5;
 export const MAX_TOTAL_GAIN_PER_FIGHT = 75;
 export const MAX_TOTAL_LOSS_PER_FIGHT = -20;
 
+/** Fixed award for a qualifying Super Pick (same as max gain clamp). */
+export const SUPER_PICK_POINTS = MAX_TOTAL_GAIN_PER_FIGHT;
+
 export const GLOBAL_RANK_ELIGIBILITY = 10;
 export const BOXING_RANK_ELIGIBILITY = 5;
 export const MMA_RANK_ELIGIBILITY = 5;

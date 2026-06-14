@@ -2,6 +2,10 @@
 
 import { MOCK_USER_ID } from "@/data/mock";
 import { getAuthUser } from "@/lib/auth/session";
+import {
+  getSuperPickMotivationLine,
+  type SuperPickMotivation,
+} from "@/lib/brand/rankingsPointsHelp";
 import { getSeedRankingsTarget, usesLiveSupabase } from "@/lib/config";
 import {
   getCurrentUserProfile,
@@ -112,4 +116,70 @@ export async function getRankingsPickProgressAction(tab: RankingTab): Promise<{
   const profile = await getCurrentUserProfile(context.userId);
   if (!profile) return { pickCount: 0, threshold };
   return { pickCount: getGradedCount(profile, tab), threshold };
+}
+
+export interface RankingsPointsHelpContext {
+  motivation: SuperPickMotivation;
+}
+
+/** Global leaderboard context for the scoring help modal (tab-independent). */
+export async function getRankingsPointsHelpContextAction(): Promise<RankingsPointsHelpContext> {
+  const top10Target = getSeedRankingsTarget();
+  const globalLeaderboard = await getLeaderboard("global");
+  const hasFullLeaderboard = globalLeaderboard.length >= top10Target;
+  const firstPlaceScore = globalLeaderboard[0]?.rating;
+  const tenthPlaceScore = globalLeaderboard[9]?.rating;
+
+  const demoMode = !usesLiveSupabase();
+  const user = demoMode ? null : await getAuthUser();
+  const userId = demoMode ? MOCK_USER_ID : user?.id;
+
+  if (!userId) {
+    return {
+      motivation: getSuperPickMotivationLine({
+        hasFullLeaderboard,
+        isGuest: true,
+        globalOfficialRank: null,
+        userGlobalScore: 0,
+        userGlobalGradedPickCount: 0,
+        firstPlaceScore,
+        tenthPlaceScore,
+      }),
+    };
+  }
+
+  const profile = await getCurrentUserProfile(userId);
+  if (!profile) {
+    return {
+      motivation: getSuperPickMotivationLine({
+        hasFullLeaderboard,
+        isGuest: true,
+        globalOfficialRank: null,
+        userGlobalScore: 0,
+        userGlobalGradedPickCount: 0,
+        firstPlaceScore,
+        tenthPlaceScore,
+      }),
+    };
+  }
+
+  let globalOfficialRank: number | null = null;
+  if (isEligibleForOfficialRank(profile, "global")) {
+    const ranks = await getProfileRanks(profile);
+    if (ranks.global.status === "official" && ranks.global.rank != null) {
+      globalOfficialRank = ranks.global.rank;
+    }
+  }
+
+  return {
+    motivation: getSuperPickMotivationLine({
+      hasFullLeaderboard,
+      isGuest: false,
+      globalOfficialRank,
+      userGlobalScore: profile.global_rating,
+      userGlobalGradedPickCount: getGradedCount(profile, "global"),
+      firstPlaceScore,
+      tenthPlaceScore,
+    }),
+  };
 }

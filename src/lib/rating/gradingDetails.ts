@@ -18,6 +18,8 @@ export interface GradingDetails {
   finalRatingChange: number;
   explanation: string;
   voided?: boolean;
+  isSuperPick?: boolean;
+  superPickPoints?: number;
 }
 
 export function buildPopularityPercentages(

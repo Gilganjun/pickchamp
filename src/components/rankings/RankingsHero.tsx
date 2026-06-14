@@ -1,5 +1,6 @@
 import { TabBar } from "@/components/TabBar";
 import { RankingsPointsHelp } from "@/components/rankings/RankingsPointsHelp";
+import type { RankingsPointsHelpContext } from "@/app/actions/rankings";
 import type { RankingTab } from "@/types";
 
 const tabs: { id: RankingTab; label: string }[] = [
@@ -11,9 +12,14 @@ const tabs: { id: RankingTab; label: string }[] = [
 interface RankingsHeroProps {
   tab: RankingTab;
   onTabChange: (tab: RankingTab) => void;
+  pointsHelpContext: RankingsPointsHelpContext;
 }
 
-export function RankingsHero({ tab, onTabChange }: RankingsHeroProps) {
+export function RankingsHero({
+  tab,
+  onTabChange,
+  pointsHelpContext,
+}: RankingsHeroProps) {
   return (
     <header className="rankings-hero relative -mx-4 overflow-hidden rounded-b-xl px-4 pb-0 pt-3">
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-red-950/25 via-[#0a0a0a]/80 to-[#0a0a0a]" />
@@ -26,7 +32,7 @@ export function RankingsHero({ tab, onTabChange }: RankingsHeroProps) {
         <p className="mt-1 text-xs text-zinc-400">
           Climb the ladder. Prove you&apos;re the best.
         </p>
-        <RankingsPointsHelp />
+        <RankingsPointsHelp helpContext={pointsHelpContext} />
       </div>
 
       <div className="relative mt-3">

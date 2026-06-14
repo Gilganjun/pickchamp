@@ -6,10 +6,12 @@ import {
   PERFECT_PICK_BONUS,
   ROUND_EXACT_BONUS,
   ROUND_WRONG_PENALTY,
+  SUPER_PICK_POINTS,
 } from "./constants";
 import type { GradingDetails, PopularityDistribution } from "./gradingDetails";
 import { getEffectivePickTier } from "./getEffectivePickTier";
 import { clampNumber, isFinishMethod } from "./helpers";
+import { evaluateSuperPick } from "./isSuperPick";
 import { getTierRatingValues } from "./tierRatings";
 import type { FavouriteLevel, FavouriteSide } from "./tierTypes";
 
@@ -50,6 +52,7 @@ export interface CalculateRatingChangeResult {
   methodCorrect: boolean | null;
   roundCorrect: boolean | null;
   perfectPick: boolean;
+  isSuperPick: boolean;
   details: GradingDetails;
 }
 
@@ -114,6 +117,7 @@ export function calculateRatingChange(
       methodCorrect: null,
       roundCorrect: null,
       perfectPick: false,
+      isSuperPick: false,
       details: voidedDetails(favouriteSide, favouriteLevel, popularity),
     };
   }
@@ -141,6 +145,7 @@ export function calculateRatingChange(
       methodCorrect: null,
       roundCorrect: null,
       perfectPick: false,
+      isSuperPick: false,
       details: {
         effectiveTier,
         favouriteSide,
@@ -199,11 +204,28 @@ export function calculateRatingChange(
   const rawBeforeClamp =
     baseTierScore + methodAdjustment + roundAdjustment + perfectBonus;
 
-  const finalRatingChange = clampNumber(
+  const computedRatingChange = clampNumber(
     rawBeforeClamp,
     MAX_TOTAL_LOSS_PER_FIGHT,
     MAX_TOTAL_GAIN_PER_FIGHT
   );
+
+  const isSuperPick = evaluateSuperPick({
+    effectiveTier,
+    mainCorrect,
+    methodCorrect,
+    roundCorrect,
+    predictedMethod,
+    resultMethod,
+  });
+
+  const finalRatingChange = isSuperPick
+    ? SUPER_PICK_POINTS
+    : computedRatingChange;
+
+  const explanation = isSuperPick
+    ? `Super Pick (tier ${effectiveTier}). Breakdown base +${baseTierScore}, method ${methodAdjustment}, round ${roundAdjustment}, perfect ${perfectBonus}. Awarded +${SUPER_PICK_POINTS}.`
+    : `Main correct (tier ${effectiveTier}, base +${baseTierScore}). Method ${methodAdjustment}, round ${roundAdjustment}, perfect ${perfectBonus}. Final ${finalRatingChange}.`;
 
   return {
     ratingChange: finalRatingChange,
@@ -211,6 +233,7 @@ export function calculateRatingChange(
     methodCorrect,
     roundCorrect,
     perfectPick,
+    isSuperPick,
     details: {
       effectiveTier,
       favouriteSide,
@@ -221,7 +244,10 @@ export function calculateRatingChange(
       perfectBonus,
       popularity,
       finalRatingChange,
-      explanation: `Main correct (tier ${effectiveTier}, base +${baseTierScore}). Method ${methodAdjustment}, round ${roundAdjustment}, perfect ${perfectBonus}. Final ${finalRatingChange}.`,
+      explanation,
+      ...(isSuperPick
+        ? { isSuperPick: true, superPickPoints: SUPER_PICK_POINTS }
+        : {}),
     },
   };
 }

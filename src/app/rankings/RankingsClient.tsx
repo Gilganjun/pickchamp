@@ -7,6 +7,7 @@ import { RankingsHero } from "@/components/rankings/RankingsHero";
 import { RankingsLeaderboard } from "@/components/rankings/RankingsLeaderboard";
 import { RankingsUserPositionCard } from "@/components/rankings/RankingsUserPositionCard";
 import {
+  getRankingsPointsHelpContextAction,
   getRankingsUserContextAction,
   loadLeaderboardAction,
 } from "@/app/actions/rankings";
@@ -26,6 +27,11 @@ export function RankingsClient() {
   const [userContext, setUserContext] = useState<RankingsUserContext>({
     state: "guest",
   });
+  const [pointsHelpContext, setPointsHelpContext] = useState<
+    Awaited<ReturnType<typeof getRankingsPointsHelpContextAction>>
+  >({
+    motivation: { variant: "neutral", line: "Make picks to begin your climb." },
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -33,9 +39,11 @@ export function RankingsClient() {
     Promise.all([
       loadLeaderboardAction(tab),
       getRankingsUserContextAction(tab),
-    ]).then(([leaderboard, context]) => {
+      getRankingsPointsHelpContextAction(),
+    ]).then(([leaderboard, context, helpContext]) => {
       setRows(leaderboard);
       setUserContext(context);
+      setPointsHelpContext(helpContext);
       setLoading(false);
     });
   }, [tab]);
@@ -46,7 +54,11 @@ export function RankingsClient() {
 
   return (
     <AppShell showTagline={false} centeredBrand>
-      <RankingsHero tab={tab} onTabChange={setTab} />
+      <RankingsHero
+        tab={tab}
+        onTabChange={setTab}
+        pointsHelpContext={pointsHelpContext}
+      />
 
       <div className="mt-3">
         {!loading ? (

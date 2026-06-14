@@ -264,6 +264,74 @@ describe("calculateRatingChange V2", () => {
   });
 });
 
+describe("Super Pick", () => {
+  const heavyUnderdogBase = {
+    favouriteSide: "fighterA" as const,
+    favouriteLevel: "heavy_favourite" as const,
+    predictedOutcome: "fighterB" as const,
+    resultOutcome: "fighterB" as const,
+  };
+
+  it("awards +75 on heavy-underdog finish with exact round", () => {
+    const r = calc({
+      ...heavyUnderdogBase,
+      predictedMethod: "ko_tko",
+      resultMethod: "ko_tko",
+      predictedRound: 3,
+      resultRound: 3,
+    });
+    expect(r.isSuperPick).toBe(true);
+    expect(r.perfectPick).toBe(true);
+    expect(r.ratingChange).toBe(75);
+    expect(r.details.baseTierScore).toBe(40);
+    expect(r.details.methodAdjustment).toBe(4);
+    expect(r.details.roundAdjustment).toBe(8);
+    expect(r.details.perfectBonus).toBe(5);
+    expect(r.details.isSuperPick).toBe(true);
+    expect(r.details.superPickPoints).toBe(75);
+  });
+
+  it("awards +75 on heavy-underdog decision without perfectPick", () => {
+    const r = calc({
+      ...heavyUnderdogBase,
+      predictedMethod: "decision",
+      resultMethod: "decision",
+      predictedRound: null,
+      resultRound: null,
+    });
+    expect(r.isSuperPick).toBe(true);
+    expect(r.perfectPick).toBe(false);
+    expect(r.ratingChange).toBe(75);
+    expect(r.details.baseTierScore).toBe(40);
+    expect(r.details.methodAdjustment).toBe(4);
+  });
+
+  it("does not award Super Pick when method is wrong", () => {
+    const r = calc({
+      ...heavyUnderdogBase,
+      predictedMethod: "ko_tko",
+      resultMethod: "decision",
+      predictedRound: null,
+      resultRound: null,
+    });
+    expect(r.isSuperPick).toBe(false);
+    expect(r.ratingChange).toBe(38);
+  });
+
+  it("does not award Super Pick when round is wrong on a finish", () => {
+    const r = calc({
+      ...heavyUnderdogBase,
+      predictedMethod: "ko_tko",
+      resultMethod: "ko_tko",
+      predictedRound: 2,
+      resultRound: 5,
+    });
+    expect(r.isSuperPick).toBe(false);
+    expect(r.perfectPick).toBe(false);
+    expect(r.ratingChange).toBe(41);
+  });
+});
+
 describe("validatePrediction", () => {
   it("invalid predicted round beyond scheduledRounds rejected", () => {
     const result = validatePrediction({
