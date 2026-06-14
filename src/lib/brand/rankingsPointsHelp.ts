@@ -102,7 +102,7 @@ export function getSuperPickMotivationLine(
     return {
       variant: "to_number_one",
       superPickCount,
-      line: `At today's scores, ${superPickCount} ${pickWord} could take you to World #1.`,
+      line: `Pick ${superPickCount} ${pickWord} to enter World #1.`,
     };
   }
 
@@ -131,6 +131,6 @@ export function getSuperPickMotivationLine(
   return {
     variant: "to_top_10",
     superPickCount,
-    line: `At today's scores, ${superPickCount} ${pickWord} could take you into the World Top 10.`,
+    line: `Pick ${superPickCount} ${pickWord} to enter the World Top 10.`,
   };
 }

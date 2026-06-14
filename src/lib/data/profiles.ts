@@ -22,6 +22,7 @@ export async function getAllProfiles(): Promise<Profile[]> {
   if (usesLiveSupabase()) {
     return fetchAllProfiles();
   }
+  await ensureSettledFightsGraded();
   return getMockProfiles();
 }
 

@@ -34,10 +34,16 @@ export function getAdminEmails(): string[] {
 
 /**
  * Bootstrap leaderboard seeds — opt-in only (PICKFIST_SEED_RANKINGS=true).
- * Set explicitly on Vercel Production. Changing on Vercel requires a redeploy.
+ * Local mock dev: on by default so rankings + scoring help match the full Top 10.
+ * Set PICKFIST_SEED_RANKINGS=false to disable locally. Production requires explicit true.
  */
 export function seedRankingsEnabled(): boolean {
-  return process.env.PICKFIST_SEED_RANKINGS === "true";
+  if (process.env.PICKFIST_SEED_RANKINGS === "true") return true;
+  if (process.env.PICKFIST_SEED_RANKINGS === "false") return false;
+  if (process.env.NODE_ENV === "development" && !usesLiveSupabase()) {
+    return true;
+  }
+  return false;
 }
 
 const DEFAULT_SEED_RANKINGS_TARGET = 10;

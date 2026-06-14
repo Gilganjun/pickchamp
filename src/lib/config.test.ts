@@ -32,3 +32,40 @@ describe("usesLiveSupabase", () => {
     expect(usesLiveSupabase()).toBe(true);
   });
 });
+
+describe("seedRankingsEnabled", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("returns true when PICKFIST_SEED_RANKINGS is true", async () => {
+    vi.stubEnv("PICKFIST_SEED_RANKINGS", "true");
+    const { seedRankingsEnabled } = await import("./config");
+    expect(seedRankingsEnabled()).toBe(true);
+  });
+
+  it("returns false when PICKFIST_SEED_RANKINGS is false", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("PICKFIST_SEED_RANKINGS", "false");
+    const { seedRankingsEnabled } = await import("./config");
+    expect(seedRankingsEnabled()).toBe(false);
+  });
+
+  it("returns true in local mock dev when unset", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
+    vi.stubEnv("PICKFIST_USE_SUPABASE", "");
+    delete process.env.PICKFIST_SEED_RANKINGS;
+    const { seedRankingsEnabled } = await import("./config");
+    expect(seedRankingsEnabled()).toBe(true);
+  });
+
+  it("returns false in production when unset", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    delete process.env.PICKFIST_SEED_RANKINGS;
+    const { seedRankingsEnabled } = await import("./config");
+    expect(seedRankingsEnabled()).toBe(false);
+  });
+});

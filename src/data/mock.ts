@@ -182,15 +182,55 @@ const daysAgo = (d: number) =>
 export const MOCK_USER_ID = "mock-user-001";
 export const MOCK_ADMIN_ID = "mock-admin-001";
 
+/** Extra eligible mock users so fightfan42 sits outside the Global Top 10 locally. */
+function mockRankingsFiller(
+  idSuffix: string,
+  username: string,
+  globalRating: number,
+  initials: string
+): Profile {
+  return {
+    id: `mock-user-r${idSuffix}`,
+    username,
+    display_name: null,
+    avatar_initials: initials,
+    global_rating: globalRating,
+    boxing_rating: globalRating,
+    mma_rating: globalRating - 8,
+    total_picks: 14,
+    total_correct: 8,
+    boxing_picks: 8,
+    boxing_correct: 5,
+    mma_picks: 6,
+    mma_correct: 3,
+    perfect_picks: 0,
+    current_streak: 1,
+    best_streak: 2,
+    created_at: daysAgo(50),
+    updated_at: daysAgo(2),
+  };
+}
+
+const mockRankingsFillers: Profile[] = [
+  mockRankingsFiller("01", "alex_m", 1055, "AM"),
+  mockRankingsFiller("02", "jordan_k", 1050, "JK"),
+  mockRankingsFiller("03", "taylor_r", 1048, "TR"),
+  mockRankingsFiller("04", "casey_l", 1046, "CL"),
+  mockRankingsFiller("05", "riley_p", 1045, "RP"),
+  mockRankingsFiller("06", "morgan_s", 1044, "MS"),
+  mockRankingsFiller("07", "jamie_w", 1043, "JW"),
+  mockRankingsFiller("08", "drew_h", 1042, "DH"),
+];
+
 export const mockProfiles: Profile[] = [
   {
     id: MOCK_USER_ID,
     username: "fightfan42",
     display_name: "Fight Fan",
     avatar_initials: "FF",
-    global_rating: 1042,
-    boxing_rating: 1088,
-    mma_rating: 1012,
+    global_rating: 1012,
+    boxing_rating: 1055,
+    mma_rating: 988,
     total_picks: 38,
     total_correct: 22,
     boxing_picks: 18,
@@ -244,6 +284,7 @@ export const mockProfiles: Profile[] = [
     created_at: daysAgo(80),
     updated_at: daysAgo(3),
   },
+  ...mockRankingsFillers,
   {
     id: MOCK_ADMIN_ID,
     username: "pickfist_admin",

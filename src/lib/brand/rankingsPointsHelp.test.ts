@@ -60,7 +60,7 @@ describe("rankingsPointsHelp", () => {
     });
     expect(result.variant).toBe("to_top_10");
     expect(result.superPickCount).toBe(2);
-    expect(result.line).toContain("could take you into the World Top 10");
+    expect(result.line).toContain("to enter the World Top 10");
   });
 
   it("uses qualification picks for provisional users below the threshold", () => {
@@ -83,7 +83,7 @@ describe("rankingsPointsHelp", () => {
     });
     expect(result.variant).toBe("to_number_one");
     expect(result.superPickCount).toBe(1);
-    expect(result.line).toContain("could take you to World #1");
+    expect(result.line).toContain("to enter World #1");
   });
 
   it("shows World #1 copy for the current leader", () => {
@@ -97,14 +97,13 @@ describe("rankingsPointsHelp", () => {
     expect(result.line).toBe(SUPER_PICK_MOTIVATION_WORLD_NUMBER_ONE);
   });
 
-  it("uses could rather than will in motivational lines", () => {
+  it("uses Pick N Super Picks phrasing for motivational lines", () => {
     const result = getSuperPickMotivationLine({
       ...fullBoard,
       globalOfficialRank: 20,
       userGlobalScore: 990,
       userGlobalGradedPickCount: 12,
     });
-    expect(result.line).toContain("could");
-    expect(result.line).not.toContain("will");
+    expect(result.line).toMatch(/^Pick \d+ Super Pick(s)? to enter/);
   });
 });
