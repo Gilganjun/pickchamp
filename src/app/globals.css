@@ -666,6 +666,26 @@ body {
   background-size: 24px 24px;
 }
 
+@keyframes rankings-tab-active-fade {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.rankings-tab-active-pulse {
+  animation: rankings-tab-active-fade 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rankings-tab-active-pulse {
+    animation: none;
+  }
+}
+
 @keyframes rankings-podium-gold-pulse {
   0%,
   100% {

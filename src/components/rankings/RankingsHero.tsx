@@ -36,7 +36,7 @@ export function RankingsHero({
       </div>
 
       <div className="relative mt-3">
-        <TabBar tabs={tabs} value={tab} onChange={onTabChange} />
+        <TabBar tabs={tabs} value={tab} onChange={onTabChange} pulseActive />
       </div>
     </header>
   );
