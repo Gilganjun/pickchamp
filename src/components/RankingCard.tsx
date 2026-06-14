@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { WorldGlobeIcon } from "@/components/profile/WorldGlobeIcon";
-import { formatSportRecord } from "@/lib/profile/display";
+import { formatSportRecord, getProfilePublicName } from "@/lib/profile/display";
 import { formatTierDisplayName, getRatingTier } from "@/lib/profile/ratingTiers";
 import { getInitials } from "@/lib/utils";
 import type { Profile, RankingTab } from "@/types";
@@ -31,6 +31,7 @@ export function RankingCard({
         ? profile.mma_correct
         : profile.total_correct;
   const incorrect = Math.max(0, picks - correct);
+  const publicName = getProfilePublicName(profile);
 
   return (
     <Link
@@ -48,10 +49,10 @@ export function RankingCard({
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#181818] text-xs font-bold text-red-500 ring-1 ring-[#2a2a2a]"
           aria-hidden
         >
-          {profile.avatar_initials ?? getInitials(profile.username)}
+          {profile.avatar_initials ?? getInitials(publicName)}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold">{profile.username}</p>
+          <p className="truncate font-semibold">{publicName}</p>
           <p className="text-[10px] font-bold uppercase tracking-wide text-[#d4a853]">
             {tierLabel}
           </p>

@@ -5,6 +5,7 @@ import {
   getGlobalRankHeroState,
   getLockedPickCount,
   getLockedPickCountForSport,
+  getProfilePublicName,
   getProgress,
   getRecentFormOutcomes,
   getRecentFormSummary,
@@ -356,5 +357,22 @@ describe("getCurrentPickItems", () => {
     expect(
       hasHiddenOpenPicksOnPublicProfile(predictions, fights)
     ).toBe(true);
+  });
+});
+
+describe("getProfilePublicName", () => {
+  it("prefers display_name when set", () => {
+    expect(
+      getProfilePublicName({
+        username: "kierancole",
+        display_name: "Kieran Cole",
+      })
+    ).toBe("Kieran Cole");
+  });
+
+  it("falls back to username", () => {
+    expect(
+      getProfilePublicName({ username: "fightfan42", display_name: null })
+    ).toBe("fightfan42");
   });
 });

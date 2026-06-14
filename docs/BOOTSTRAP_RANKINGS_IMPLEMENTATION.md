@@ -116,9 +116,9 @@ Reviewers must verify these remain untouched:
 ### Usernames
 
 ```
-canvas_king, southpaw_sam, jab_game, octagon_owen, clinch_control,
-ring_craft, body_shots, ground_pulse, roundsmith, velvet_glove,
-hook_house, cage_math, split_decision, leg_kick_luca
+kierancole, amirpicks, nicosantos, samhollis, jayv, owencastillo,
+frankied, the_clinch, rafavega, masonq, leonmercer, coryvale,
+darrenc, elenaruiz
 ```
 
 ### Rating design (“catchable” band)
@@ -126,7 +126,7 @@ hook_house, cage_math, split_decision, leg_kick_luca
 | Constraint | Value |
 |------------|-------|
 | Hard max (any rating field) | **1075** |
-| Typical leader (global) | **1065–1068** (`canvas_king`) |
+| Typical leader (global) | **1065–1068** (`Kieran Cole`) |
 | Lower seeds | **1008–1055** |
 | Default baseline | 1000 (same as real users) |
 
@@ -185,13 +185,13 @@ Each tab (**global**, **boxing**, **mma**) runs this **independently** per reque
 
 ### Worked example with ratings
 
-Launch: 0 real users → Global shows top 10 seeds by `global_rating` (e.g. `canvas_king` #1 at 1065).
+Launch: 0 real users → Global shows top 10 seeds by `global_rating` (e.g. `Kieran Cole` #1 at 1065).
 
 After 3 real users qualify with ratings 1040, 1035, 1020:
 - `seedsToShow = 7`
 - Merge includes all 3 real + 7 highest seeds
 - `sortLeaderboard` orders by rating → reals and seeds interleave fairly
-- Lowest seeds (e.g. `velvet_glove` at 1008) fall out of the selected 7 first
+- Lowest seeds (e.g. `Mason Quinn` at 1008) fall out of the selected 7 first
 
 When the 10th real user qualifies:
 - `seedsToShow = 0` → leaderboard is 100% genuine (for that tab).

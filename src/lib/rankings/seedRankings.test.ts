@@ -136,7 +136,7 @@ describe("seedRankings", () => {
 
     expect(eligible).toHaveLength(10);
     expect(eligible.some((profile) => profile.id === "real-1")).toBe(true);
-    expect(eligible.some((profile) => profile.username === "leg_kick_luca")).toBe(
+    expect(eligible.some((profile) => profile.username === "elenaruiz")).toBe(
       false
     );
   });
@@ -180,19 +180,19 @@ describe("seedRankings", () => {
 
   it("excludes seeds when a real profile claims the same username", () => {
     const real = makeRealProfile({
-      id: "real-canvas",
-      username: "canvas_king",
+      id: "real-kieran",
+      username: "kierancole",
       boxing_picks: 0,
       mma_picks: 0,
       global_rating: 1000,
     });
 
     const available = getAvailableSeedProfiles([real]);
-    expect(available.some((seed) => seed.username === "canvas_king")).toBe(false);
+    expect(available.some((seed) => seed.username === "kierancole")).toBe(false);
 
     const merged = mergeProfilesForRankings([real], "global");
     const eligible = sortLeaderboard(merged, "global");
-    expect(eligible.filter((profile) => profile.username === "canvas_king")).toHaveLength(
+    expect(eligible.filter((profile) => profile.username === "kierancole")).toHaveLength(
       0
     );
   });

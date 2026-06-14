@@ -11,6 +11,14 @@ import type {
   PredictedOutcome,
 } from "@/types";
 
+/** Leaderboard / card label — prefers display name when set. */
+export function getProfilePublicName(
+  profile: Pick<Profile, "username" | "display_name">
+): string {
+  const displayName = profile.display_name?.trim();
+  return displayName || profile.username;
+}
+
 export function getPredictorTitle(globalRating: number): string {
   if (globalRating < 1000) return "Rookie Predictor";
   if (globalRating < 1100) return "Rising Predictor";

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ProgressBar } from "@/components/profile/ProgressBar";
 import { CrownIcon, MedalIcon } from "@/components/rankings/RankingsIcons";
-import { formatSportRecord } from "@/lib/profile/display";
+import { formatSportRecord, getProfilePublicName } from "@/lib/profile/display";
 import {
   formatTierDisplayName,
   getRatingTier,
@@ -80,6 +80,7 @@ export function RankingPodiumCard({
         ? profile.mma_correct
         : profile.total_correct;
   const incorrect = Math.max(0, picks - correct);
+  const publicName = getProfilePublicName(profile);
 
   return (
     <Link
@@ -89,7 +90,7 @@ export function RankingPodiumCard({
         styles.border,
         isCurrentUser && "ring-1 ring-red-500/40"
       )}
-      aria-label={`Rank ${rank}, ${profile.username}, ${formatPickFistScore(rating)} PickFist Score`}
+      aria-label={`Rank ${rank}, ${publicName}, ${formatPickFistScore(rating)} PickFist Score`}
     >
       <div className="flex gap-3">
         <div className="flex w-11 shrink-0 flex-col items-center">
@@ -123,14 +124,14 @@ export function RankingPodiumCard({
           )}
           aria-hidden
         >
-          {profile.avatar_initials ?? getInitials(profile.username)}
+          {profile.avatar_initials ?? getInitials(publicName)}
         </div>
 
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="truncate font-semibold text-white">
-                {profile.username}
+                {publicName}
               </p>
               <p className="text-[10px] font-bold uppercase tracking-wide text-[#d4a853]">
                 {tierLabel}

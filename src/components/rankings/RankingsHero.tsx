@@ -1,4 +1,5 @@
 import { TabBar } from "@/components/TabBar";
+import { RankingsPointsHelp } from "@/components/rankings/RankingsPointsHelp";
 import type { RankingTab } from "@/types";
 
 const tabs: { id: RankingTab; label: string }[] = [
@@ -25,6 +26,7 @@ export function RankingsHero({ tab, onTabChange }: RankingsHeroProps) {
         <p className="mt-1 text-xs text-zinc-400">
           Climb the ladder. Prove you&apos;re the best.
         </p>
+        <RankingsPointsHelp />
       </div>
 
       <div className="relative mt-3">
