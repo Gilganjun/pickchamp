@@ -1,9 +1,10 @@
 # PickFist Code Bible
 
-**Last updated:** June 2026  
+**Last updated:** 12 June 2026 (post `154ad39`)  
 **Production:** [pickfist.com](https://pickfist.com)  
 **Repo:** `Gilganjun/pickchamp` (branch `master`)  
-**Tagline:** *You Don't Know S\*\*\* About Fighting.*
+**Tagline:** *You Don't Know S\*\*\* About Fighting.*  
+**Catalog size (mock / dev):** 23 events · 195 fights
 
 ---
 
@@ -19,6 +20,8 @@ Also useful companions:
 - `docs/ADMIN_FIGHT_CLASSIFICATION_GUIDE.md` — admin favourite fields
 - `supabase/schema.sql` — database truth
 - `supabase/seed_launch.sql` — launch event/fight cards
+- `supabase/seed_battle_of_legends_june27.sql` — Athens card (no `card_tier`)
+- `supabase/fix_*.sql` — targeted production data fixes (see §24)
 
 ---
 
@@ -32,8 +35,9 @@ PickFist is a **combat-sports prediction competition** for **boxing** and **MMA*
 
 | Journey | Route | Summary |
 |---------|-------|---------|
-| Make picks | `/picks` | Filter by sport + event card, tap fighters, auto-save picks |
-| View profile | `/profile` | Rating, rank state, current picks, recent form, stats |
+| Make picks | `/picks` | Filter by sport + event card, tap fighters, auto-save picks (guests can draft in localStorage) |
+| Pick Record | `/pick-record` | Full pick history, Future/Past/All tabs, PDF + TXT export (receipt-style) |
+| View profile | `/profile` | Rating, rank state, current picks, sport rankings, trial notice, Pick Record CTA |
 | Public profile | `/profile/[username]` | Others' profiles; open picks hidden until lock |
 | Leaderboard | `/rankings` | Global / Boxing / MMA tabs |
 | Browse events | `/events`, `/events/[id]` | Upcoming and settled cards |
@@ -183,19 +187,24 @@ src/
 │   ├── BrandHeader.tsx       # Logo + rotating tagline
 │   ├── PickFistLogo.tsx      # PNG brand mark
 │   ├── LockGraphic.tsx       # Lock overlay asset
-│   ├── picks/                # PicksFilterBar, PickRatingSwing, impact FX
-│   ├── profile/              # Profile page sections
-│   ├── auth/                 # Login/signup/OAuth UI
+│   ├── picks/                # PicksFilterBar, PickRatingSwing, GuestPickBanner, GuestPickMigrator
+│   ├── pickRecord/           # Pick Record page UI + export sheet
+│   ├── profile/              # Profile page sections, SubscriptionTrialNotice
+│   ├── auth/                 # Login/signup/OAuth UI, StaySignedInField
 │   └── admin/                # Admin fight fields
 │
 ├── lib/
 │   ├── config.ts             # usesLiveSupabase(), ADMIN_EMAILS
 │   ├── data/                 # fights.ts, profiles.ts, events.ts, supabase-fetch.ts
-│   ├── auth/                 # session, oauth, username, admin gate
+│   ├── picks/                # guestPickStore, reconcileGuestPicks, changePickRoute
+│   ├── pickRecord/           # pickRecord.ts, exportPickRecord.ts (jspdf)
+│   ├── billing/              # trialDisplay.ts — visual trial UI only (no Stripe yet)
+│   ├── auth/                 # session, oauth, username, rememberMe, admin gate
 │   ├── rating/               # SCORING FORMULA — do not change casually
 │   ├── grading/              # gradeFight.ts — batch grading on settle
 │   ├── profile/              # display.ts, ratingTiers.ts, rankGraphics.ts
 │   ├── rankings.ts           # Leaderboard eligibility + sort
+│   ├── rankings/seedRankings.ts  # Bootstrap merge (live production only)
 │   ├── supabase/             # server/client/admin clients, mappers
 │   ├── mock/                 # demoPredictionStore.ts
 │   ├── dev/                  # phantomPicksDev.ts
@@ -203,6 +212,7 @@ src/
 │   └── datetime.ts           # All user-facing timestamps (en-GB)
 │
 ├── data/mock.ts              # Static seed events/fights/profiles
+├── data/seedRankingsProfiles.ts  # Live bootstrap leaderboard profiles (temporary)
 └── types/index.ts            # Shared TS types
 
 supabase/
@@ -232,7 +242,8 @@ docs/                         # This file + rating/admin guides
 | `/events/[id]` | `app/events/[id]/page.tsx` | |
 | `/profile` | `app/profile/page.tsx` | `force-dynamic`, own profile |
 | `/profile/[username]` | `app/profile/[username]/page.tsx` | Public profile |
-| `/login` | `app/login/page.tsx` | |
+| `/pick-record` | `app/pick-record/page.tsx` + `PickRecordPageClient.tsx` | Own profile only; `force-dynamic` |
+| `/login` | `app/login/page.tsx` | Stay signed in checkbox (default on) |
 | `/signup` | `app/signup/page.tsx` | Separate forms for Google vs email |
 | `/onboarding/username` | `app/onboarding/username/page.tsx` | Google users without username |
 | `/auth/callback` | `app/auth/callback/route.ts` | OAuth code exchange |
@@ -258,6 +269,13 @@ docs/                         # This file + rating/admin guides
 - Signup flow: username stored as `pending_username` in redirect URL, applied on callback
 - Login flow: users without proper username → `/onboarding/username`
 - Detection: `profileNeedsUsernameOnboarding()` in `src/lib/auth/username.ts`
+
+### Stay signed in (`rememberMe`)
+- Checkbox on `/login` and `/signup` via `StaySignedInField.tsx` (default **checked**)
+- Form field `rememberMe=on` parsed by `src/lib/auth/rememberMe.ts`
+- Passed to `createClient({ rememberMe })` in auth actions + OAuth callback (`?remember=` param)
+- Controls Supabase auth cookie `maxAge` via `getAuthCookieOptions()` in server/client/middleware
+- Unchecked → session cookie (browser session only)
 
 ### Session
 - Server: `createClient()` from `src/lib/supabase/server.ts` (cookies)
@@ -286,7 +304,7 @@ docs/                         # This file + rating/admin guides
 
 | Function | Purpose |
 |----------|---------|
-| `isActivePicksFight(fight)` | Tab `upcoming` or `live` (excludes settled) |
+| `isActivePicksFight(fight)` | Tab `upcoming`, `live`, or `settled` (excludes cancelled/no_contest) — settled cards appear under **Past Picks** |
 | `isEventPicksLocked(fights)` | **All** fights on card past lock — triggers collapsed locked UI |
 | `groupFightsByEvent(fights)` | Event card sections |
 | `filterFightsForPicksView()` | Sport + event filter |
@@ -325,6 +343,20 @@ Profile pages use **`getFightsForProfile()`** + **`getUserPredictions()`** — s
 - Status UI: Saving / Saved ✓ / Pick updated ✓ / Couldn't save (retry)
 - **No "Lock my pick" button** — removed in favor of auto-save
 - Locked/settled fights: read-only panel with `LockGraphic` + saved pick line
+- **`PickLockSection` hidden until a pick exists** — returns `null` when no saved pick, no guest draft, and not saving (`PickRatingSwing.tsx`). Grey wrapper in `FightCard.tsx` only mounts when `existing || outcome || saveStatus === "saving"`.
+
+### Guest picks (unauthenticated)
+- **Store:** `src/lib/picks/guestPickStore.ts` — `localStorage` key `pickfist-guest-picks`, 48h expiry
+- **UI:** `FightCard` accepts `guestDraft`; save status `"guest"` until login
+- **Banner:** `GuestPickBanner.tsx` in `BottomNav` — prompts sign-up when drafts exist
+- **Migration:** `GuestPickMigrator.tsx` (mounted in layout) calls `migrateGuestPicksAction` after auth
+- **Reconcile:** `reconcileGuestPicks.ts` — prunes guest store on logout/login cycles; fixes stale banner bugs
+- **Live Supabase only** for migration to `predictions` table; mock mode uses demo store directly
+- Guests have **unlimited** picks today (no subscription enforcement)
+
+### Change Pick deep links
+- `src/lib/picks/changePickRoute.ts` → `/picks?sport=…&event=…&fight=…`
+- `CurrentPickCard.tsx` links to focused fight; `PicksClient` expands correct card/section
 
 ### Locked event cards (`PicksClient.tsx` → `EventCardSection`)
 When `isEventPicksLocked(cardFights)`:
@@ -353,15 +385,21 @@ When `isEventPicksLocked(cardFights)`:
 - `src/components/profile/ProfilePageContent.tsx` — composes sections
 - `src/lib/profile/display.ts` — **all profile display logic**
 
+### Typography (profile)
+- **Teko** font (`--font-teko` in `layout.tsx`) used for level names, section headings, world-rank numbers, subscription trial banner
+- `ProfileSectionHeading.tsx` — centered Teko section titles
+- `RankingTitleHeader.tsx` — globe icon + Teko rank titles (hero + card sizes)
+- `WorldRankInTheWorldBadge.tsx` — diagonal `-rotate-12` **"in the world"** chip on sport rank displays (red=boxing, purple=mma)
+
 ### Sections
 | Section | Component | Key logic |
 |---------|-----------|-----------|
-| Hero | `ProfileHero.tsx` | Rating, tier ladder, global rank state |
-| Current picks | `CurrentPicksSection.tsx` | Carousel of open ungraded picks |
-| Recent form | `RecentForm.tsx` | Last N graded W/L |
-| Sport breakdown | `SportBreakdownCard.tsx` | Boxing/MMA records |
+| Trial notice | `SubscriptionTrialNotice.tsx` | **Own profile only** — gold banner: "1 Month Free Trial · Unlimited picks"; dates from `profiles.created_at` via `trialDisplay.ts` |
+| Hero | `ProfileHero.tsx` | Teko level name, world rank states, `PickRecordHeroButton`, compact recent form |
+| Sport rankings | `SportRankingsSection.tsx` | Tappable boxing/MMA cards with world rank + "in the world" badge; scroll/focus cues |
+| Current picks | `CurrentPicksSection.tsx` | Carousel; **Change Pick** deep links to `/picks?…` |
+| Recent results | `RecentPredictionCard.tsx` | Last 8 graded (replaces separate Recent Form section in hero flow) |
 | Detailed stats | `DetailedStatsSection.tsx` | Deeper counters |
-| Recent predictions | `RecentPredictionCard.tsx` | Last 8 graded |
 
 ### Global rank hero states (`getGlobalRankHeroState`)
 Uses **`getLockedPickCount()`** (picks on fights past lock time):
@@ -380,9 +418,41 @@ Thresholds in `src/lib/rating/constants.ts`: global **10**, boxing **5**, mma **
 `src/lib/profile/ratingTiers.ts` — Novice → All-Time Great (12 steps).  
 **Does not affect rating math.** Rank graphics: `src/lib/profile/rankGraphics.ts` → `/public/ranks/*.png`
 
+### Pick Record (profile entry + dedicated page)
+| File | Role |
+|------|------|
+| `src/lib/pickRecord/pickRecord.ts` | Classify picks (future/past), status labels, sort/group for list |
+| `src/lib/pickRecord/exportPickRecord.ts` | Receipt-style **PDF** (jspdf) + **TXT** export |
+| `src/app/pick-record/page.tsx` | Server page — auth required in live mode |
+| `src/components/pickRecord/PickRecordPageClient.tsx` | Future / Past / All tabs |
+| `src/components/pickRecord/PickRecordExportSheet.tsx` | Export scope + format picker |
+| `src/components/profile/PickRecordHeroButton.tsx` | CTA in profile hero with upcoming/settled counts |
+
+Statuses: `pending` | `waiting_for_results` | `won` | `lost` | `perfect`  
+Dependency: **jspdf** for PDF generation.
+
 ---
 
-## 11. Rankings / leaderboard
+## 11. Subscription & billing (status)
+
+### Implemented (visual only — no payments)
+- `SubscriptionTrialNotice` on own profile — template for future billing UX
+- `src/lib/billing/trialDisplay.ts` — trial end = signup (`profiles.created_at`) + 1 calendar month
+- Test: `src/lib/billing/trialDisplay.test.ts`
+- **No** Stripe, no `subscription` DB tables, no pick limits enforced in `savePrediction()` yet
+
+### Planned (discussed, not built — needs explicit approval)
+| Tier | Proposed limits |
+|------|-----------------|
+| **Standard** (post-trial) | 3 picks per day |
+| **Premium** | $1.99/mo or $20/yr — unlimited picks |
+
+Recommended enforcement point when built: `savePrediction()` in `src/lib/data/fights.ts`.  
+Guests currently unlimited in `localStorage`; logged-in users unlimited until billing ships.
+
+---
+
+## 12. Rankings / leaderboard
 
 - `src/lib/rankings.ts` — eligibility, sort order, rank display states
 - `src/app/rankings/RankingsClient.tsx` — tabs: global / boxing / mma
@@ -393,9 +463,41 @@ Thresholds in `src/lib/rating/constants.ts`: global **10**, boxing **5**, mma **
 
 Rank states: `inactive` | `provisional` | `official`
 
+### Bootstrap seed rankings (temporary — live production only)
+
+Static starter leaderboard entries so early visitors see an active community. **App-layer only** — no Supabase auth accounts, no predictions, no prizes.
+
+| File | Role |
+|------|------|
+| `src/data/seedRankingsProfiles.ts` | 14 fixed profiles (IDs `…-b000-…`), ≥10 eligible per tab, ratings capped at 1075 |
+| `src/lib/rankings/seedRankings.ts` | Merge logic, collision handling, `isSeedRankingsProfile()` |
+| `src/lib/data/profiles.ts` | Ranking merge in `getLeaderboard()` + `getProfileRanks()`; seed resolution in `getProfileByUsername()` |
+
+**Progressive replacement per tab:**
+
+```
+seedsToShow = max(0, PICKFIST_SEED_RANKINGS_TARGET - realEligibleCount)
+```
+
+Genuine **eligible** users fill Top 10 slots; seeds disappear as slots fill — not when individual users exceed seed scores. When genuine eligible ≥ target, show all genuine users and zero seeds.
+
+**Safeguards:**
+
+- Genuine profiles always win over seeds (by `id` or normalized `username` collision).
+- Seed profiles resolve to **minimal read-only** `/profile/[username]` pages (stats + ranks only; no pick history).
+- Ranking cards link to profile pages for all leaderboard entries.
+- Seeds never merged into `getAllProfiles()`, admin, auth, predictions, analytics, or future prize/FOTN logic.
+- **Opt-in only:** `PICKFIST_SEED_RANKINGS=true` on Vercel Production; redeploy required after env change.
+
+**Env vars:** `PICKFIST_SEED_RANKINGS` (default off), `PICKFIST_SEED_RANKINGS_TARGET` (default 10). See §19 and `docs/BOOTSTRAP_RANKINGS_IMPLEMENTATION.md`.
+
+**Removal:** Disable env flag + redeploy, then delete seed modules when no longer needed.
+
+Tests: `src/lib/rankings/seedRankings.test.ts`
+
 ---
 
-## 12. Events page
+## 13. Events page
 
 - `src/lib/data/events.ts` — `getEventsWithMeta()`, `getEventDetail()`
 - `EventWithMeta` adds `fightCount`, `sports[]`, `isSettled`
@@ -403,7 +505,7 @@ Rank states: `inactive` | `provisional` | `official`
 
 ---
 
-## 13. Admin system
+## 14. Admin system
 
 ### Access (`src/lib/auth/admin.ts` + `src/app/admin/layout.tsx`)
 | Mode | Rule |
@@ -433,7 +535,7 @@ Validated by `src/lib/rating/validateFavouriteFields.ts`
 
 ---
 
-## 14. Rating system (DO NOT CHANGE WITHOUT EXPLICIT APPROVAL)
+## 15. Rating system (DO NOT CHANGE WITHOUT EXPLICIT APPROVAL)
 
 **Popularity is analytics only** — not used in `ratingChange`.
 
@@ -469,7 +571,7 @@ Full spec: `docs/RATING_SYSTEM_IMPLEMENTATION.md`
 
 ---
 
-## 15. Database schema
+## 16. Database schema
 
 Run order: `schema.sql` → `seed_launch.sql`
 
@@ -489,7 +591,7 @@ Run order: `schema.sql` → `seed_launch.sql`
 
 ---
 
-## 16. Server actions (complete list)
+## 17. Server actions (complete list)
 
 ### `src/app/actions/auth.ts`
 - `signUpAction`, `signInAction`, `signOutAction`
@@ -499,6 +601,7 @@ Run order: `schema.sql` → `seed_launch.sql`
 ### `src/app/actions/picks.ts`
 - `loadPicksPageDataAction(sport, eventCard)`
 - `savePredictionAction(input)` — revalidates profile on success
+- `migrateGuestPicksAction(drafts)` — upserts guest localStorage picks after login
 
 ### `src/app/actions/rankings.ts`
 - `loadLeaderboardAction(tab)`
@@ -508,7 +611,7 @@ Run order: `schema.sql` → `seed_launch.sql`
 
 ---
 
-## 17. Branding & assets
+## 18. Branding & assets
 
 | Asset | Path | Component |
 |-------|------|-----------|
@@ -519,13 +622,14 @@ Run order: `schema.sql` → `seed_launch.sql`
 | Sounds | `/sounds/Punch*.mp3` | `playPickImpactSound.ts` |
 
 **Header:** `BrandHeader.tsx` — logo (`object-bottom`), rotating tagline (`RotatingSubheading.tsx`), optional profile link.  
-**Tagline phrases:** `src/lib/brand/subheadingPhrases.ts` (8 phrases, rotates on Picks page).
+**Tagline phrases:** `src/lib/brand/subheadingPhrases.ts` (8 phrases, rotates on Picks page).  
+**Teko font:** loaded in `src/app/layout.tsx` as `--font-teko` — profile headings, ranks, trial banner.
 
-Source masters live in `/Graphics/` (repo root).
+Source masters live in `/Graphics/` (repo root, often untracked locally).
 
 ---
 
-## 18. Environment variables
+## 19. Environment variables
 
 See `.env.example`:
 
@@ -537,12 +641,14 @@ See `.env.example`:
 | `ADMIN_EMAILS` | Server | Comma-separated admin emails |
 | `PICKFIST_USE_SUPABASE` | Local dev | `true` = live Supabase locally |
 | `PICKFIST_PHANTOM_CARD` | Local dev | Phantom test card |
+| `PICKFIST_SEED_RANKINGS` | Server | Opt-in: must be `true` to enable bootstrap seeds (set on Vercel Production) |
+| `PICKFIST_SEED_RANKINGS_TARGET` | Production | Target visible rows per tab during bootstrap (default 10) |
 
 **Never commit** `.env.local`, `.mock-data/`, or secrets.
 
 ---
 
-## 19. Testing
+## 20. Testing
 
 ```bash
 npm test          # vitest run (all *.test.ts under src/)
@@ -554,13 +660,17 @@ Key test files:
 - `src/lib/rating/calculateRatingChange.test.ts` — scoring formula
 - `src/lib/profile/display.test.ts` — profile display logic
 - `src/lib/data/fights-utils.test.ts` — locked card helpers
-- `src/lib/auth/oauth.test.ts`, `username.test.ts`
+- `src/lib/rankings/seedRankings.test.ts` — bootstrap leaderboard merge + collision handling
+- `src/lib/pickRecord/pickRecord.test.ts` — pick record classify/sort
+- `src/lib/billing/trialDisplay.test.ts` — trial date display
+- `src/lib/picks/guestPickStore.test.ts`, `reconcileGuestPicks.test.ts`
+- `src/lib/auth/oauth.test.ts`, `username.test.ts`, `rememberMe.test.ts`
 
 **Rule:** Do not change rating formula to make tests pass — tests document intended behavior.
 
 ---
 
-## 20. Deployment
+## 21. Deployment
 
 ```bash
 git push origin master
@@ -579,7 +689,7 @@ Project may live in OneDrive. Stale `.next` causes broken CSS.
 
 ---
 
-## 21. Cookbook: how to change common things
+## 22. Cookbook: how to change common things
 
 ### Add a new fight card (production)
 1. Insert rows in Supabase `events` + `fights` (or use `/admin/events` + `/admin/fights`)
@@ -622,9 +732,19 @@ export default function MyPage() {
 
 Props: `prominentBrand`, `showProfileLink`, `showBottomNav`, `showBrand`
 
+### Fix production data without redeploy
+See **§24 Production SQL playbook** — use targeted `supabase/fix_*.sql` and `seed_*_fights_only.sql` files.
+
+### Add Pick Record export styling
+- `src/lib/pickRecord/exportPickRecord.ts` — PDF layout + TXT format
+
+### Change subscription trial banner (visual only)
+- `src/components/profile/SubscriptionTrialNotice.tsx` — copy/styling
+- `src/lib/billing/trialDisplay.ts` — trial length (currently 1 month from `profiles.created_at`)
+
 ---
 
-## 22. What NOT to modify (unless explicitly requested)
+## 23. What NOT to modify (unless explicitly requested)
 
 | Area | Reason |
 |------|--------|
@@ -636,44 +756,90 @@ Props: `prominentBrand`, `showProfileLink`, `showBottomNav`, `showBrand`
 | `.mock-data/` contents | Gitignored dev files |
 | Run old migrations on fresh DB | Columns already in `schema.sql` |
 | Phantom card in production | Dev-only guards in `phantomPicksDev.ts` |
+| Enforce subscription pick limits without product sign-off | Billing not wired; guests unlimited today |
+| Insert `card_tier` on production events | Column does not exist in live schema |
 
 ---
 
-## 23. Current state (handoff snapshot — June 2026)
+## 24. Production SQL playbook
 
-### Deployed & live (recent commits)
-| Commit | Feature |
+**Run in Supabase SQL editor** — not via app deploy. Prefer idempotent scripts (`ON CONFLICT DO NOTHING`, targeted `UPDATE`).
+
+### Schema gotchas (production)
+| Issue | Cause | Fix |
+|-------|-------|-----|
+| `card_tier` column error | Column exists in some dev seeds but **not** in production `events` table | Never insert `card_tier` on production; use `seed_battle_of_legends_june27.sql` (corrected) |
+| Athens card shows **0 fights** | Event row exists from `seed_launch.sql` without fight rows | Run `supabase/seed_battle_of_legends_fights_only.sql` |
+| Bam card wrong title | Old name `Rodriguez vs. Vargas` | `supabase/fix_rodriguez_vargas_event_name.sql` or `UPDATE … WHERE id = 'e0000006-0006-4000-a000-000000000006'` |
+| Mayweather not first on card | Wrong `fight_order` | `supabase/fix_battle_of_legends_fight_order.sql` |
+| UFC Freedom favourites wrong | Seed drift | `supabase/fix_ufc_freedom_250_favourites.sql` |
+| Brooks opponent name | Was wrong on Fury card | `supabase/fix_rahim_pardesi_name.sql` |
+
+### When to use which Athens / Battle of Legends script
+| Situation | File |
+|-----------|------|
+| Fresh production — event + fights missing | `seed_battle_of_legends_june27.sql` |
+| Event `e0000023` exists, 0 fights | `seed_battle_of_legends_fights_only.sql` |
+| Fights exist, Mayweather not `fight_order = 1` | `fix_battle_of_legends_fight_order.sql` |
+
+### Event IDs (production UUIDs)
+| Card | Event ID | Mock `evt-*` |
+|------|----------|--------------|
+| Bam Rodriguez vs. Vargas | `e0000006-0006-4000-a000-000000000006` | `evt-006` |
+| Mayweather vs. Zambidis (Battle of the Legends) | `e0000023-0023-4000-a000-000000000023` | `evt-023` |
+
+Mayweather main event: `fight_order = 1`, appears in **both** Boxing and MMA sport filters (mixed card).
+
+---
+
+## 25. Current state (handoff snapshot — 12 June 2026)
+
+### Latest deployed commits (newest first)
+| Commit | Summary |
 |--------|---------|
-| `4b3d0fd` | PNG logo (`PickfistLogo.png`), compact header layout |
-| `bbac5ea` | Optimized `Lock.png` (205×205) |
-| `bce51c1` | Auto-save picks, locked card UX, profile revalidation |
-| `3a582db` | Vercel Web Analytics |
-| `7e3ba60` | Signup Google form validation fix |
-| `c0c9dc4` | Google OAuth + username onboarding |
-| `dad17e4` | Profile hero rank states + rotating subheadings |
-| `7303c97` | Qualification thresholds: 10 global / 5 per sport |
+| `154ad39` | Profile free-trial subscription notice; Athens seed SQL fixes (`card_tier` removed); `seed_battle_of_legends_fights_only.sql` |
+| `b701c1c` | Battle of Legends card (`evt-023`); pick UX — hide empty "Your current pick" panel; receipt-style Pick Record PDF export |
+| `499113c` | Pick Record page (`/pick-record`), table-based PDF/TXT export, profile UX polish |
+| `e8bad6b` | UFC Freedom 250 White House card (`evt-022`); verified odds alignment |
+| `ce4fff2` | Clear stale guest-pick banner after login/logout |
+| `2acc63d` | Stay signed in + persistent auth cookies (`rememberMe`) |
+| `d7c9422` | Guest draft picks in localStorage + post-login migration |
+| `d672c79` | Change Pick deep links; tappable sport ranking scroll on profile |
+| `7ea3de7` | Profile hero level rankings, record stats, swipe cues |
+| `b7a1270` | World ranks (not raw ratings) on profile + rankings header |
 
-### Launch content
-Real cards seeded:
-- **6–7 June 2026:** Steel City King (Sheffield), UFC Fight Night (Vegas), Zuffa Boxing 7 (Bournemouth)
-- **13 June 2026:** Fury vs. Hall: Beauty vs. The Beast — Misfits Boxing, AO Arena Manchester (10 bouts, DAZN PPV). SQL: `supabase/seed_misfits_june13.sql`
-- **13 June 2026:** Hawley vs. Steward — Warren Boxing Management, York Hall Bethnal Green (9 bouts). SQL: `supabase/seed_york_hall_june13.sql`
-- **13 June 2026:** Rodriguez vs. Vargas — Matchroom Boxing, Desert Diamond Arena Glendale (8 bouts, DAZN). SQL: `supabase/seed_rodriguez_vargas_june13.sql`
-- **13 June 2026:** MVPW-04 — Most Valuable Promotions, Caribe Royale Orlando (12 bouts, ESPN+). SQL: `supabase/seed_mvpw04_june13.sql`
-- **14 June 2026:** Gonzalez vs. Perez — Salita Promotions, GLC Live at 20 Monroe Grand Rapids (8 bouts, DAZN). SQL: `supabase/seed_gonzalez_perez_june14.sql`
-- **19 June 2026:** Pugilist Revolution — MF Pro, Thunder Studios Long Beach (5 bouts, DAZN). SQL: `supabase/seed_pugilist_revolution_june19.sql`
-- **20 June 2026:** Garner vs. Magnesi — Queensberry Promotions, St Mary's Stadium Southampton (5 bouts, DAZN). SQL: `supabase/seed_garner_magnesi_june20.sql`
-- **20 June 2026:** Quarless vs. McDonald — VIP Boxing, Olympia Liverpool (6 bouts). SQL: `supabase/seed_quarless_mcdonald_june20.sql`
-- **20 June 2026:** Bibby vs. Walsh — St Andrew's Sporting Club, DoubleTree Hilton Glasgow (5 bouts). SQL: `supabase/seed_bibby_walsh_june20.sql`
-- **20 June 2026:** Davey vs. Thompson — Mark Bateson Promotions, Batley Bulldogs Stadium (9 bouts). SQL: `supabase/seed_davey_thompson_june20.sql`
-- **20 June 2026:** Allen vs. Chvarkou — White Rhino Boxing, Magna Centre Rotherham (6 bouts). SQL: `supabase/seed_allen_chvarkou_june20.sql`
-- **20 June 2026:** King of the West — Toro Promotions, Celebrity Theater Phoenix (12 bouts). SQL: `supabase/seed_king_of_the_west_june20.sql`
-- **20 June 2026:** Back II The Future — Bey Bros Promotions, Goodyear Hall Akron (6 bouts). SQL: `supabase/seed_back_ii_the_future_june20.sql`
-- **22 June 2026:** Kusamura vs. Kyohara — Ichiriki Promotions, Korakuen Hall Tokyo (8 bouts). SQL: `supabase/seed_kusamura_kyohara_june22.sql`
-- **24 June 2026:** Crocker vs. Paro — No Limit Boxing, Pat Rafter Arena Tennyson (10 bouts, FOX/Kayo). SQL: `supabase/seed_crocker_paro_june24.sql`
-- **27 June 2026:** Pascal vs. Lafreniere — New Era Sports & Entertainment, Colisee de Laval (8 bouts, BFRÖZ Fight Night). SQL: `supabase/seed_pascal_lafreniere_june27.sql`
-- **27 June 2026:** Zachenhuber vs. Ajrulai — German Boxing Series, Strassenkicker Base Cologne (11 bouts). SQL: `supabase/seed_zachenhuber_ajrulai_june27.sql`
-- **27 June 2026:** Zayas vs. Ennis — Matchroom Boxing, Barclays Center Brooklyn (7 bouts, DAZN PPV). SQL: `supabase/seed_zayas_ennis_june27.sql`
+### Catalog inventory (mock data, time-sensitive)
+
+Evaluated with `isFightLocked()` + `isEventPicksLocked()` against `getMockFightWithRelations()`:
+
+| Metric | Count (≈12 Jun 2026 UTC) |
+|--------|---------------------------|
+| Total fights | 195 |
+| Total events | 23 |
+| **Pickable fights** | **167** (154 boxing · 13 mma) |
+| **Active fight cards** | **20** |
+| Locked/past cards | 3 |
+
+**Locked cards (all fights settled/locked):** Steel City King (8), Zuffa Boxing 7 (8), UFC Fight Night: Muhammad vs. Bonfim (12).
+
+**Pickable** = `status === "upcoming"` AND `lock_time > now`. Counts decrease as lock times pass.
+
+Production Supabase may differ if seeds/fixes not applied.
+
+### Launch content (SQL seeds)
+
+**Settled launch weekend (6–7 Jun 2026):** Steel City King, UFC Fight Night: Muhammad vs. Bonfim, Zuffa Boxing 7 — results in `seed_results_june6_2026.sql`.
+
+**Upcoming cards (representative — see `supabase/seed_*.sql`):**
+- **13 Jun:** Fury vs. Hall, Hawley vs. Steward, **Bam Rodriguez vs. Vargas**, MVPW-04
+- **14 Jun:** Gonzalez vs. Perez, **UFC Freedom 250: Topuria vs. Gaethje** (`seed_ufc_freedom_250_june14.sql`)
+- **19–27 Jun:** Pugilist Revolution through Zayas vs. Ennis
+- **27 Jun:** **Mayweather vs. Zambidis** — Battle of the Legends, Athens (`seed_battle_of_legends_june27.sql`) — 15 fights, boxing + MMA menu
+
+### Not yet implemented (paused)
+- Stripe / payment integration
+- Standard vs Premium pick limits (see §11)
+- Subscription DB columns
 
 ### Known local dev tools
 - `PICKFIST_USE_SUPABASE=true` — test live auth/data locally
@@ -683,10 +849,12 @@ Real cards seeded:
 - Google OAuth provider in Supabase + Google Cloud Console
 - Vercel Web Analytics toggle in dashboard
 - `ADMIN_EMAILS` for admin access
+- Set **`PICKFIST_SEED_RANKINGS=true`** on Vercel Production for bootstrap Top 10 (redeploy after env change)
+- Run production SQL fixes above when cards missing or misnamed on live DB
 
 ---
 
-## 24. Type reference (quick)
+## 26. Type reference (quick)
 
 Defined in `src/types/index.ts`:
 
@@ -700,7 +868,7 @@ Defined in `src/types/index.ts`:
 
 ---
 
-## 25. Key conventions for contributors
+## 27. Key conventions for contributors
 
 1. **Branch on `usesLiveSupabase()`** for every data path — never assume Supabase exists.
 2. **Server actions** for all mutations (picks, auth, admin).
@@ -712,6 +880,10 @@ Defined in `src/types/index.ts`:
 8. **Tests** for rating/display logic changes; `npm run build` before deploy.
 9. **Revalidate** profile after pick saves if adding new save paths.
 10. **Rating math lives in one place** — UI reads `getPickPotential`, never duplicates tiers.
+11. **Guest picks** — never write guest drafts to Supabase directly; use `guestPickStore` + `migrateGuestPicksAction`.
+12. **Production SQL** — data fixes go in `supabase/fix_*.sql` / idempotent seeds; do not assume `card_tier` or other dev-only columns exist on live DB.
+13. **Billing UI is cosmetic** until Stripe + `savePrediction()` limits are explicitly requested.
+14. **Bootstrap seed rankings** — merge only in `getLeaderboard` / `getProfileRanks`; filter with `isSeedRankingsProfile()` in any future prize or user-count logic.
 
 ---
 

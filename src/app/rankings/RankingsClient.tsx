@@ -2,57 +2,57 @@
 
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { RankingCard } from "@/components/RankingCard";
-import { RankingsPageHeader } from "@/components/rankings/RankingsPageHeader";
-import { TabBar } from "@/components/TabBar";
+import { RankingsCtaBanner } from "@/components/rankings/RankingsCtaBanner";
+import { RankingsHero } from "@/components/rankings/RankingsHero";
+import { RankingsLeaderboard } from "@/components/rankings/RankingsLeaderboard";
+import { RankingsUserPositionCard } from "@/components/rankings/RankingsUserPositionCard";
 import {
-  getRankingsPickProgressAction,
+  getRankingsUserContextAction,
   loadLeaderboardAction,
 } from "@/app/actions/rankings";
 import { getRankingsEmptyMessage } from "@/lib/brand/rankingsCopy";
+import {
+  getRankingsCtaVariant,
+  getUserStateFromContext,
+  type RankingsUserContext,
+} from "@/lib/rankings/rankingsDisplay";
 import type { RankingTab } from "@/types";
-
-const tabs: { id: RankingTab; label: string }[] = [
-  { id: "global", label: "Global" },
-  { id: "boxing", label: "Boxing" },
-  { id: "mma", label: "MMA" },
-];
 
 export function RankingsClient() {
   const [tab, setTab] = useState<RankingTab>("global");
   const [rows, setRows] = useState<
     Awaited<ReturnType<typeof loadLeaderboardAction>>
   >([]);
-  const [pickCount, setPickCount] = useState(0);
-  const [threshold, setThreshold] = useState(10);
+  const [userContext, setUserContext] = useState<RankingsUserContext>({
+    state: "guest",
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
     Promise.all([
       loadLeaderboardAction(tab),
-      getRankingsPickProgressAction(tab),
-    ]).then(([leaderboard, progress]) => {
+      getRankingsUserContextAction(tab),
+    ]).then(([leaderboard, context]) => {
       setRows(leaderboard);
-      setPickCount(progress.pickCount);
-      setThreshold(progress.threshold);
+      setUserContext(context);
       setLoading(false);
     });
   }, [tab]);
 
+  const currentUserId =
+    userContext.state === "guest" ? null : userContext.userId;
+  const ctaVariant = getRankingsCtaVariant(getUserStateFromContext(userContext));
+
   return (
     <AppShell showTagline={false} centeredBrand>
-      <RankingsPageHeader
-        tab={tab}
-        pickCount={pickCount}
-        threshold={threshold}
-      />
+      <RankingsHero tab={tab} onTabChange={setTab} />
 
       <div className="mt-3">
-        <TabBar tabs={tabs} value={tab} onChange={setTab} />
-      </div>
+        {!loading ? (
+          <RankingsUserPositionCard context={userContext} />
+        ) : null}
 
-      <div className="mt-3 space-y-3">
         {loading ? (
           <p className="py-8 text-center text-sm text-zinc-400">Loading…</p>
         ) : rows.length === 0 ? (
@@ -60,18 +60,20 @@ export function RankingsClient() {
             {getRankingsEmptyMessage()}
           </p>
         ) : (
-          rows.map((row) => (
-            <RankingCard
-              key={row.profile.id}
-              profile={row.profile}
-              rank={row.rank}
-              rating={row.rating}
-              accuracy={row.accuracy}
-              picks={row.picks}
+          <div className="rankings-top10-wrap mt-5 border-t border-[#2a2a2a] pt-4">
+            <RankingsLeaderboard
+              rows={rows}
               tab={tab}
+              currentUserId={currentUserId}
             />
-          ))
+          </div>
         )}
+
+        {!loading ? (
+          <div className="mt-4">
+            <RankingsCtaBanner variant={ctaVariant} />
+          </div>
+        ) : null}
       </div>
     </AppShell>
   );

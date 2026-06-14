@@ -14,6 +14,7 @@ import {
   getGlobalAccuracy,
   hasHiddenOpenPicksOnPublicProfile,
 } from "@/lib/profile/display";
+import { isSeedRankingsProfile } from "@/lib/rankings/seedRankings";
 import type { FightWithRelations, Prediction, Profile } from "@/types";
 import type { getProfileRanks } from "@/lib/data/profiles";
 
@@ -35,6 +36,7 @@ export function ProfilePageContent({
   isOwnProfile = false,
   showRecentPredictions = true,
 }: ProfilePageContentProps) {
+  const isSeedProfile = isSeedRankingsProfile(profile);
   const accuracy = getGlobalAccuracy(profile);
   const currentPicks = getCurrentPickItems(predictions, fights, {
     isOwnProfile,
@@ -73,6 +75,9 @@ export function ProfilePageContent({
         items={currentPicks}
         isOwnProfile={isOwnProfile}
         showHiddenMessage={showHiddenMessage}
+        emptyMessage={
+          isSeedProfile ? "No current picks available." : undefined
+        }
       />
 
       <SportRankingsSection
@@ -82,25 +87,34 @@ export function ProfilePageContent({
         fights={fights}
       />
 
-      {showRecentPredictions && (
+      {isSeedProfile ? (
         <section>
           <ProfileSectionHeading>Recent Results</ProfileSectionHeading>
-          <div className="space-y-2">
-            {gradedRecent.length === 0 ? (
-              <p className="rounded-lg border border-[#2a2a2a] bg-[#111111] px-3 py-2.5 text-xs text-zinc-500">
-                No graded predictions yet.
-              </p>
-            ) : (
-              gradedRecent.map((pred) => (
-                <RecentPredictionCard
-                  key={pred.id}
-                  prediction={pred}
-                  fight={fights.find((f) => f.id === pred.fight_id)}
-                />
-              ))
-            )}
-          </div>
+          <p className="rounded-lg border border-[#2a2a2a] bg-[#111111] px-3 py-2.5 text-xs text-zinc-500">
+            No recent public picks available.
+          </p>
         </section>
+      ) : (
+        showRecentPredictions && (
+          <section>
+            <ProfileSectionHeading>Recent Results</ProfileSectionHeading>
+            <div className="space-y-2">
+              {gradedRecent.length === 0 ? (
+                <p className="rounded-lg border border-[#2a2a2a] bg-[#111111] px-3 py-2.5 text-xs text-zinc-500">
+                  No graded predictions yet.
+                </p>
+              ) : (
+                gradedRecent.map((pred) => (
+                  <RecentPredictionCard
+                    key={pred.id}
+                    prediction={pred}
+                    fight={fights.find((f) => f.id === pred.fight_id)}
+                  />
+                ))
+              )}
+            </div>
+          </section>
+        )
       )}
 
       <DetailedStatsSection profile={profile} ranks={ranks} />

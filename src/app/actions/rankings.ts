@@ -2,41 +2,114 @@
 
 import { MOCK_USER_ID } from "@/data/mock";
 import { getAuthUser } from "@/lib/auth/session";
-import { usesLiveSupabase } from "@/lib/config";
-import { getFightsForPicks, getUserPredictions } from "@/lib/data/fights";
-import { getLeaderboard } from "@/lib/data/profiles";
-import { getEligibilityThreshold } from "@/lib/rankings";
+import { getSeedRankingsTarget, usesLiveSupabase } from "@/lib/config";
+import {
+  getCurrentUserProfile,
+  getLeaderboard,
+  getProfileRanks,
+} from "@/lib/data/profiles";
+import {
+  getEligibilityThreshold,
+  getGradedCount,
+  getRating,
+  isEligibleForOfficialRank,
+} from "@/lib/rankings";
+import {
+  getGapToTop10Score,
+  type RankingsUserContext,
+} from "@/lib/rankings/rankingsDisplay";
 import type { RankingTab } from "@/types";
 
 export async function loadLeaderboardAction(tab: RankingTab) {
   return getLeaderboard(tab);
 }
 
-export async function getRankingsPickProgressAction(tab: RankingTab): Promise<{
-  pickCount: number;
-  threshold: number;
-}> {
+export async function getRankingsUserContextAction(
+  tab: RankingTab
+): Promise<RankingsUserContext> {
   const threshold = getEligibilityThreshold(tab);
   const demoMode = !usesLiveSupabase();
   const user = demoMode ? null : await getAuthUser();
   const userId = demoMode ? MOCK_USER_ID : user?.id;
 
   if (!userId) {
-    return { pickCount: 0, threshold };
+    return { state: "guest" };
   }
 
-  const [predictions, fights] = await Promise.all([
-    getUserPredictions(userId),
-    getFightsForPicks("all", userId, "all"),
+  const profile = await getCurrentUserProfile(userId);
+  if (!profile) {
+    return { state: "guest" };
+  }
+
+  const gradedCount = getGradedCount(profile, tab);
+  if (!isEligibleForOfficialRank(profile, tab)) {
+    return {
+      state: "provisional",
+      userId: profile.id,
+      picksRemaining: Math.max(0, threshold - gradedCount),
+      tab,
+    };
+  }
+
+  const [ranks, leaderboard] = await Promise.all([
+    getProfileRanks(profile),
+    getLeaderboard(tab),
   ]);
 
-  const sportByFightId = new Map(fights.map((fight) => [fight.id, fight.sport]));
-  const pickCount =
-    tab === "global"
-      ? predictions.length
-      : predictions.filter(
-          (prediction) => sportByFightId.get(prediction.fight_id) === tab
-        ).length;
+  const rankDisplay =
+    tab === "global" ? ranks.global : tab === "boxing" ? ranks.boxing : ranks.mma;
 
-  return { pickCount, threshold };
+  if (rankDisplay.status !== "official" || rankDisplay.rank == null) {
+    return {
+      state: "provisional",
+      userId: profile.id,
+      picksRemaining: Math.max(0, threshold - gradedCount),
+      tab,
+    };
+  }
+
+  const officialRank = rankDisplay.rank;
+  const score = getRating(profile, tab);
+  const top10Cutoff = getSeedRankingsTarget();
+
+  if (officialRank <= top10Cutoff) {
+    return {
+      state: "official_inside",
+      userId: profile.id,
+      officialRank,
+      score,
+    };
+  }
+
+  const tenthPlaceScore = leaderboard[9]?.rating;
+  const gapToTop10 = getGapToTop10Score(score, tenthPlaceScore);
+
+  return {
+    state: "official_outside",
+    userId: profile.id,
+    officialRank,
+    score,
+    gapToTop10,
+  };
+}
+
+/** @deprecated Use getRankingsUserContextAction for graded eligibility. */
+export async function getRankingsPickProgressAction(tab: RankingTab): Promise<{
+  pickCount: number;
+  threshold: number;
+}> {
+  const threshold = getEligibilityThreshold(tab);
+  const context = await getRankingsUserContextAction(tab);
+  if (context.state === "provisional") {
+    return {
+      pickCount: threshold - context.picksRemaining,
+      threshold,
+    };
+  }
+  if (context.state === "guest") {
+    return { pickCount: 0, threshold };
+  }
+  const profile = await getCurrentUserProfile(context.userId);
+  if (!profile) return { pickCount: 0, threshold };
+  return { pickCount: getGradedCount(profile, tab), threshold };
 }

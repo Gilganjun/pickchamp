@@ -2,9 +2,16 @@ import { cn } from "@/lib/utils";
 
 interface ProgressBarProps {
   percent: number;
-  variant?: "red" | "gold";
+  variant?: "red" | "gold" | "silver" | "bronze";
   className?: string;
 }
+
+const VARIANT_FILL: Record<NonNullable<ProgressBarProps["variant"]>, string> = {
+  red: "bg-red-500",
+  gold: "bg-[#d4a853]",
+  silver: "bg-[#c0c0c0]",
+  bronze: "bg-[#cd7f32]",
+};
 
 export function ProgressBar({
   percent,
@@ -26,7 +33,7 @@ export function ProgressBar({
       <div
         className={cn(
           "h-full rounded-full transition-all duration-300",
-          variant === "gold" ? "bg-[#d4a853]" : "bg-red-500"
+          VARIANT_FILL[variant]
         )}
         style={{ width: `${clamped}%` }}
       />

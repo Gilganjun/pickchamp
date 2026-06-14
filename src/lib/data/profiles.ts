@@ -11,6 +11,11 @@ import {
   getRankDisplay,
   sortLeaderboard,
 } from "@/lib/rankings";
+import {
+  findSeedProfileByUsername,
+  mergeProfilesForRankings,
+  shouldUseSeedRankings,
+} from "@/lib/rankings/seedRankings";
 import type { Profile, RankingTab } from "@/types";
 
 export async function getAllProfiles(): Promise<Profile[]> {
@@ -24,10 +29,19 @@ export async function getProfileByUsername(
   username: string
 ): Promise<Profile | null> {
   if (usesLiveSupabase()) {
-    return fetchProfileByUsername(username);
+    const real = await fetchProfileByUsername(username);
+    if (real) return real;
+  } else {
+    const profiles = await getAllProfiles();
+    const real = profiles.find((p) => p.username === username);
+    if (real) return real;
   }
-  const profiles = await getAllProfiles();
-  return profiles.find((p) => p.username === username) ?? null;
+
+  if (shouldUseSeedRankings()) {
+    return findSeedProfileByUsername(username);
+  }
+
+  return null;
 }
 
 export async function getCurrentUserProfile(
@@ -53,7 +67,8 @@ export async function getLeaderboard(tab: RankingTab): Promise<
     picks: number;
   }>
 > {
-  const profiles = await getAllProfiles();
+  const realProfiles = await getAllProfiles();
+  const profiles = mergeProfilesForRankings(realProfiles, tab);
   const sorted = sortLeaderboard(profiles, tab);
   const ranks = assignOfficialRanks(sorted);
 
@@ -98,10 +113,19 @@ export async function getProfileRanks(profile: Profile): Promise<{
   boxing: ReturnType<typeof getRankDisplay>;
   mma: ReturnType<typeof getRankDisplay>;
 }> {
-  const all = await getAllProfiles();
-  const globalSorted = sortLeaderboard(all, "global");
-  const boxingSorted = sortLeaderboard(all, "boxing");
-  const mmaSorted = sortLeaderboard(all, "mma");
+  const realProfiles = await getAllProfiles();
+  const globalSorted = sortLeaderboard(
+    mergeProfilesForRankings(realProfiles, "global"),
+    "global"
+  );
+  const boxingSorted = sortLeaderboard(
+    mergeProfilesForRankings(realProfiles, "boxing"),
+    "boxing"
+  );
+  const mmaSorted = sortLeaderboard(
+    mergeProfilesForRankings(realProfiles, "mma"),
+    "mma"
+  );
   const globalRanks = assignOfficialRanks(globalSorted);
   const boxingRanks = assignOfficialRanks(boxingSorted);
   const mmaRanks = assignOfficialRanks(mmaSorted);

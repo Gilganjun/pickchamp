@@ -10,6 +10,8 @@ interface CurrentPicksSectionProps {
   items: CurrentPickItem[];
   isOwnProfile: boolean;
   showHiddenMessage: boolean;
+  /** Overrides default empty copy (e.g. bootstrap seed profiles). */
+  emptyMessage?: string;
 }
 
 type HeadingCuePhase = "down" | "left" | "right";
@@ -233,6 +235,7 @@ export function CurrentPicksSection({
   items,
   isOwnProfile,
   showHiddenMessage,
+  emptyMessage,
 }: CurrentPicksSectionProps) {
   const [showArrows, setShowArrows] = useState(false);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -303,7 +306,9 @@ export function CurrentPicksSection({
 
       {items.length === 0 ? (
         <div className="mt-2 rounded-xl border border-[#2a2a2a] bg-[#111111] p-4">
-          {showHiddenMessage ? (
+          {emptyMessage ? (
+            <p className="text-sm text-zinc-400">{emptyMessage}</p>
+          ) : showHiddenMessage ? (
             <p className="text-sm text-zinc-400">
               Current picks are hidden until fights lock.
             </p>

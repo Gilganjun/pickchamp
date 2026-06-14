@@ -653,3 +653,46 @@ body {
     box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.7);
   }
 }
+
+/* Rankings page — compact hero + podium emphasis */
+.rankings-hero {
+  background-color: #0a0a0a;
+}
+
+.rankings-hero-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+@keyframes rankings-podium-gold-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 14px rgba(212, 168, 83, 0.18);
+  }
+  50% {
+    box-shadow: 0 0 18px rgba(212, 168, 83, 0.32);
+  }
+}
+
+.rankings-podium-gold {
+  animation: rankings-podium-gold-pulse 2.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rankings-podium-gold {
+    animation: none;
+  }
+}
+
+.rankings-top10-section {
+  box-shadow:
+    inset 0 1px 0 rgba(212, 168, 83, 0.1),
+    0 6px 28px rgba(0, 0, 0, 0.4);
+}
+
+.rankings-top10-header {
+  padding-top: 0.5rem;
+  padding-bottom: 0.25rem;
+}

@@ -31,3 +31,21 @@ export function getAdminEmails(): string[] {
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
 }
+
+/**
+ * Bootstrap leaderboard seeds — opt-in only (PICKFIST_SEED_RANKINGS=true).
+ * Set explicitly on Vercel Production. Changing on Vercel requires a redeploy.
+ */
+export function seedRankingsEnabled(): boolean {
+  return process.env.PICKFIST_SEED_RANKINGS === "true";
+}
+
+const DEFAULT_SEED_RANKINGS_TARGET = 10;
+
+export function getSeedRankingsTarget(): number {
+  const raw = process.env.PICKFIST_SEED_RANKINGS_TARGET?.trim();
+  if (!raw) return DEFAULT_SEED_RANKINGS_TARGET;
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed) || parsed < 1) return DEFAULT_SEED_RANKINGS_TARGET;
+  return parsed;
+}
