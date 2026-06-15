@@ -62,7 +62,7 @@ function assertTestKey(name, value) {
   }
 }
 
-function vercelEnvAdd(name, value, environments = ["production", "preview"]) {
+function vercelEnvAdd(name, value, environments = ["production"]) {
   for (const env of environments) {
     console.log(`Setting Vercel ${env}: ${name}`);
     execSync(`npx vercel env add ${name} ${env} --force`, {

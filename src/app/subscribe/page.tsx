@@ -66,7 +66,7 @@ export default async function SubscribePage({ searchParams }: SubscribePageProps
 
         {params.success === "1" ? (
           <p className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 px-4 py-3 text-sm text-emerald-300">
-            Subscription setup complete. Your trial continues until billing begins.
+            Subscription setup complete.
           </p>
         ) : null}
 
