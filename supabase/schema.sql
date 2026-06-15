@@ -285,6 +285,15 @@ grant select on public.rating_history to anon, authenticated;
 grant select on public.grading_runs to anon, authenticated;
 grant select on public.subscriptions to authenticated;
 
+grant usage on schema public to service_role;
+
+grant select, insert, update, delete on public.subscriptions to service_role;
+grant select, insert, update, delete on public.stripe_webhook_events to service_role;
+
+grant execute on function public.claim_stripe_webhook_event(text, text) to service_role;
+grant execute on function public.complete_stripe_webhook_event(text) to service_role;
+grant execute on function public.fail_stripe_webhook_event(text, text) to service_role;
+
 grant insert, update on public.profiles to authenticated;
 grant insert, update on public.predictions to authenticated;
 

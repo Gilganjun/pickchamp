@@ -55,8 +55,8 @@ function fromSubscription(subscription: Subscription): SubscriptionDisplayInfo {
       renewalLabel: null,
       showSubscribeCta: false,
       showManageCta: true,
-      headline: "Canceled · Access continues until " + trialEndsLabel,
-      subline: "You will not be charged.",
+      headline: "Subscription canceled",
+      subline: `Access continues until ${trialEndsLabel}. You will not be charged.`,
       billingStartsImmediately: false,
     };
   }

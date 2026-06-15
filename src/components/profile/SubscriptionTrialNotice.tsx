@@ -46,7 +46,11 @@ export function SubscriptionTrialNotice({
           ·
         </span>
         <span>
-          {display.variant === "active" ? "Renews" : "Trial ends"}{" "}
+          {display.variant === "active"
+            ? "Renews"
+            : display.variant === "canceled_during_trial"
+              ? "Access until"
+              : "Trial ends"}{" "}
           <span className="font-semibold text-zinc-300">
             {display.variant === "active" && display.renewalLabel
               ? display.renewalLabel

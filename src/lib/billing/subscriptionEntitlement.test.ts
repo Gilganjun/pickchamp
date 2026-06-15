@@ -51,6 +51,25 @@ describe("subscriptionEntitlement", () => {
     ).toBe(false);
   });
 
+  it("detects canceled-during-trial when Stripe keeps status trialing", () => {
+    const scheduledCancel = {
+      ...baseSubscription,
+      stripe_customer_id: "cus_test",
+      stripe_subscription_id: "sub_test",
+      status: "trialing" as const,
+      cancel_at_period_end: true,
+      current_period_end: "2026-07-01T00:00:00.000Z",
+    };
+
+    expect(isCanceledDuringTrial(scheduledCancel, midTrial)).toBe(true);
+    expect(isTrialing(scheduledCancel, midTrial)).toBe(true);
+    expect(hasPremiumAccess(scheduledCancel, midTrial)).toBe(true);
+    expect(canStartCheckout(scheduledCancel, midTrial)).toBe(false);
+    expect(getCheckoutBlockReason(scheduledCancel, midTrial)).toBe(
+      "canceled_during_trial"
+    );
+  });
+
   it("retains access when canceled during trial", () => {
     const canceledDuringTrial = {
       ...baseSubscription,

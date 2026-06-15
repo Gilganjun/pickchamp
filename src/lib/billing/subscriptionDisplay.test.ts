@@ -41,7 +41,30 @@ describe("getSubscriptionDisplayInfo", () => {
     expect(display.showManageCta).toBe(true);
   });
 
-  it("shows canceled-during-trial copy instead of trial-expired", () => {
+  it("shows canceled-during-trial copy for trialing + cancel_at_period_end", () => {
+    const display = getSubscriptionDisplayInfo(
+      {
+        ...baseSubscription,
+        stripe_customer_id: "cus_test",
+        stripe_subscription_id: "sub_test",
+        status: "trialing",
+        cancel_at_period_end: true,
+        current_period_end: "2026-07-06T12:00:00.000Z",
+      },
+      baseSubscription.trial_started_at
+    );
+
+    expect(display.variant).toBe("canceled_during_trial");
+    expect(display.headline).toBe("Subscription canceled");
+    expect(display.subline).toBe(
+      "Access continues until 6 Jul 2026. You will not be charged."
+    );
+    expect(display.subline).not.toMatch(/continues until.*not be charged before then/i);
+    expect(display.showSubscribeCta).toBe(false);
+    expect(display.showManageCta).toBe(true);
+  });
+
+  it("shows canceled-during-trial copy for immediate canceled status", () => {
     const display = getSubscriptionDisplayInfo(
       {
         ...baseSubscription,
@@ -52,7 +75,8 @@ describe("getSubscriptionDisplayInfo", () => {
     );
 
     expect(display.variant).toBe("canceled_during_trial");
-    expect(display.headline).toMatch(/Canceled · Access continues until/i);
+    expect(display.headline).toBe("Subscription canceled");
+    expect(display.subline).toMatch(/Access continues until/i);
     expect(display.variant).not.toBe("trial_expired");
   });
 

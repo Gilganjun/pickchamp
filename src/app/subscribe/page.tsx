@@ -113,7 +113,11 @@ export default async function SubscribePage({ searchParams }: SubscribePageProps
 
         {display ? (
           <section className="rounded-xl border border-[#d4a853]/35 bg-gradient-to-br from-[#d4a853]/10 via-[#181818] to-[#111111] px-4 py-4">
-            {display.subline ? (
+            {display.variant === "canceled_during_trial" ? (
+              <p className="text-sm text-zinc-300">
+                Subscription canceled. {display.subline}
+              </p>
+            ) : display.subline ? (
               <p className="text-sm text-zinc-300">{display.subline}</p>
             ) : (
               <p className="text-sm text-zinc-300">

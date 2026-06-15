@@ -18,7 +18,16 @@ export function isCanceledDuringTrial(
   subscription: Subscription,
   now = Date.now()
 ): boolean {
-  return subscription.status === "canceled" && isWithinTrialPeriod(subscription, now);
+  if (!isWithinTrialPeriod(subscription, now)) return false;
+
+  if (
+    subscription.status === "trialing" &&
+    subscription.cancel_at_period_end
+  ) {
+    return true;
+  }
+
+  return subscription.status === "canceled";
 }
 
 export function hasActivePaidPeriod(
