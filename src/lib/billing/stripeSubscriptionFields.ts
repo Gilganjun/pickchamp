@@ -8,7 +8,10 @@ export function getStripeSubscriptionPeriodEnd(
     return subscription.current_period_end;
   }
 
-  const itemEnd = subscription.items?.data?.[0]?.current_period_end;
+  const firstItem = subscription.items?.data?.[0] as
+    | { current_period_end?: number | null }
+    | undefined;
+  const itemEnd = firstItem?.current_period_end;
   if (itemEnd != null) return itemEnd;
 
   if (subscription.trial_end != null) return subscription.trial_end;
