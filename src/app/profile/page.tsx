@@ -7,6 +7,10 @@ import { usesLiveSupabase } from "@/lib/config";
 import { MOCK_USER_ID } from "@/data/mock";
 import { getFightsForProfile, getUserPredictions } from "@/lib/data/fights";
 import {
+  ensureSubscriptionForUser,
+  fetchSubscriptionByUserId,
+} from "@/lib/data/subscriptions";
+import {
   getCurrentUserProfile,
   getProfileRanks,
 } from "@/lib/data/profiles";
@@ -54,6 +58,10 @@ export default async function ProfilePage() {
     const ranks = await getProfileRanks(profile);
     const predictions = await getUserPredictions(user.id);
     const fights = await getFightsForProfile(user.id);
+    let subscription = await fetchSubscriptionByUserId(user.id);
+    if (!subscription) {
+      subscription = await ensureSubscriptionForUser(user.id, profile.created_at);
+    }
 
     return (
       <AppShell
@@ -66,6 +74,7 @@ export default async function ProfilePage() {
           ranks={ranks}
           predictions={predictions}
           fights={fights}
+          subscription={subscription}
           isOwnProfile
         />
       </AppShell>

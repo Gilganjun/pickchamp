@@ -15,7 +15,7 @@ import {
   hasHiddenOpenPicksOnPublicProfile,
 } from "@/lib/profile/display";
 import { isSeedRankingsProfile } from "@/lib/rankings/seedRankings";
-import type { FightWithRelations, Prediction, Profile } from "@/types";
+import type { FightWithRelations, Prediction, Profile, Subscription } from "@/types";
 import type { getProfileRanks } from "@/lib/data/profiles";
 
 interface ProfilePageContentProps {
@@ -26,6 +26,7 @@ interface ProfilePageContentProps {
   subtitle?: string;
   isOwnProfile?: boolean;
   showRecentPredictions?: boolean;
+  subscription?: Subscription | null;
 }
 
 export function ProfilePageContent({
@@ -35,6 +36,7 @@ export function ProfilePageContent({
   fights,
   isOwnProfile = false,
   showRecentPredictions = true,
+  subscription = null,
 }: ProfilePageContentProps) {
   const isSeedProfile = isSeedRankingsProfile(profile);
   const accuracy = getGlobalAccuracy(profile);
@@ -60,7 +62,9 @@ export function ProfilePageContent({
 
   return (
     <div className="pickfist-content mx-auto w-full max-w-lg space-y-4 pb-4">
-      {isOwnProfile ? <SubscriptionTrialNotice profile={profile} /> : null}
+      {isOwnProfile ? (
+        <SubscriptionTrialNotice profile={profile} subscription={subscription} />
+      ) : null}
 
       <ProfileHero
         profile={profile}

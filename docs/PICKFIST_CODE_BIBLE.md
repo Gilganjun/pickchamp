@@ -1,6 +1,6 @@
 # PickFist Code Bible
 
-**Last updated:** 12 June 2026 (post `154ad39`)  
+**Last updated:** 15 June 2026 (billing v1 in working tree; per-fight live locking §28)  
 **Production:** [pickfist.com](https://pickfist.com)  
 **Repo:** `Gilganjun/pickchamp` (branch `master`)  
 **Tagline:** *You Don't Know S\*\*\* About Fighting.*  
@@ -21,6 +21,8 @@ Also useful companions:
 - `supabase/schema.sql` — database truth
 - `supabase/seed_launch.sql` — launch event/fight cards
 - `supabase/seed_battle_of_legends_june27.sql` — Athens card (no `card_tier`)
+- `supabase/seed_ufc_freedom_250_june14.sql` — UFC Freedom 250 card (see §28 for lock-time caveat)
+- `supabase/migrations/20260614_subscriptions.sql` — billing tables (run on production before Stripe)
 - `supabase/fix_*.sql` — targeted production data fixes (see §24)
 
 ---
@@ -42,6 +44,7 @@ PickFist is a **combat-sports prediction competition** for **boxing** and **MMA*
 | Leaderboard | `/rankings` | Global / Boxing / MMA tabs |
 | Browse events | `/events`, `/events/[id]` | Upcoming and settled cards |
 | Auth | `/login`, `/signup` | Email/password + Google OAuth |
+| Subscribe | `/subscribe` | Stripe Checkout + Customer Portal entry (live Supabase + Stripe env only) |
 | Admin | `/admin/*` | Create events/fights, settle results, grade picks |
 
 Home `/` redirects to `/picks`.
@@ -58,6 +61,7 @@ Home `/` redirects to `/picks`.
 | Backend / DB | **Supabase** (Auth + Postgres + RLS) |
 | Hosting | **Vercel** (`pickfist.com`) |
 | Analytics | `@vercel/analytics` in `src/app/layout.tsx` |
+| Payments | **Stripe** (`stripe` npm package) — Checkout, Portal, webhooks |
 | Tests | **Vitest** (`npm test`) |
 
 **Path alias:** `@/*` → `src/*`
@@ -151,8 +155,9 @@ sequenceDiagram
   participant DB as Supabase / Mock
   participant Cache as Next.js Cache
 
-  FC->>SA: tap fighter / debounced method+round
+  FC->>SA: tap fighter / debounced method+round (+ client isLocked flag)
   SA->>SP: validate + upsert
+  Note over SA,SP: Today: isLocked comes from client — must move to server-side fight fetch (see §28)
   SP->>DB: predictions upsert
   SP-->>SA: { ok, prediction }
   SA->>Cache: revalidatePath("/profile", "layout")
@@ -169,7 +174,9 @@ sequenceDiagram
 ```
 src/
 ├── app/                      # Routes, layouts, server actions
-│   ├── actions/              # auth.ts, picks.ts, rankings.ts, admin.ts
+│   ├── actions/              # auth.ts, picks.ts, rankings.ts, admin.ts, billing.ts
+│   ├── api/stripe/webhook/   # Stripe webhook (POST)
+│   ├── subscribe/            # Subscription checkout page
 │   ├── admin/                # Admin UI (layout gated)
 │   ├── auth/callback/        # OAuth callback route
 │   ├── picks/                # Main picks experience
@@ -195,10 +202,10 @@ src/
 │
 ├── lib/
 │   ├── config.ts             # usesLiveSupabase(), ADMIN_EMAILS
-│   ├── data/                 # fights.ts, profiles.ts, events.ts, supabase-fetch.ts
+│   ├── data/                 # fights.ts, profiles.ts, events.ts, subscriptions.ts, supabase-fetch.ts
 │   ├── picks/                # guestPickStore, reconcileGuestPicks, changePickRoute
 │   ├── pickRecord/           # pickRecord.ts, exportPickRecord.ts (jspdf)
-│   ├── billing/              # trialDisplay.ts — visual trial UI only (no Stripe yet)
+│   ├── billing/              # trialDates, entitlement, Stripe config, webhook claim policy
 │   ├── auth/                 # session, oauth, username, rememberMe, admin gate
 │   ├── rating/               # SCORING FORMULA — do not change casually
 │   ├── grading/              # gradeFight.ts — batch grading on settle
@@ -208,6 +215,7 @@ src/
 │   ├── supabase/             # server/client/admin clients, mappers
 │   ├── mock/                 # demoPredictionStore.ts
 │   ├── dev/                  # phantomPicksDev.ts
+│   ├── live/                 # *(Planned §28)* ESPN poller, fight matcher, sync worker
 │   ├── brand/                # subheadingPhrases.ts
 │   └── datetime.ts           # All user-facing timestamps (en-GB)
 │
@@ -247,6 +255,8 @@ docs/                         # This file + rating/admin guides
 | `/signup` | `app/signup/page.tsx` | Separate forms for Google vs email |
 | `/onboarding/username` | `app/onboarding/username/page.tsx` | Google users without username |
 | `/auth/callback` | `app/auth/callback/route.ts` | OAuth code exchange |
+| `/subscribe` | `app/subscribe/page.tsx` | Stripe Checkout / Portal; `force-dynamic` |
+| `/api/stripe/webhook` | `app/api/stripe/webhook/route.ts` | Stripe event sync (server-only) |
 | `/admin` | `app/admin/page.tsx` | Hub |
 | `/admin/events` | `app/admin/events/page.tsx` | |
 | `/admin/fights` | `app/admin/fights/page.tsx` | Favourite classification |
@@ -309,11 +319,21 @@ docs/                         # This file + rating/admin guides
 | `groupFightsByEvent(fights)` | Event card sections |
 | `filterFightsForPicksView()` | Sport + event filter |
 
-### Lock state (no cron)
-Derived in `src/lib/utils.ts`:
-- `isFightLocked(fight)` — status locked/settled/etc. OR `lock_time <= now`
-- `inferFightTab(status, lock_time)` → `upcoming` | `live` | `settled`
-- `getLockCountdown(lock_time)` — UI countdown string
+### Lock state (derived — no live sync yet)
+
+Lock is computed at read/save time in `src/lib/utils.ts`:
+
+| Function | Purpose |
+|----------|---------|
+| `isFightLocked(fight)` | `true` when `status` is `locked` / `result_pending` / `settled` / `cancelled` / `no_contest`, **or** `lock_time <= now` |
+| `inferFightTab(status, lock_time)` | `upcoming` \| `live` \| `settled` |
+| `getLockCountdown(lock_time)` | UI countdown string |
+
+**Per-fight vs per-card:** Each fight has its own `lock_time` and lock state. A card only collapses into the locked UI when **every** fight on it is locked (`isEventPicksLocked()` in `fights-utils.ts`). Individual `FightCard` components already respect per-fight lock — but seed data and missing live sync can make an entire card appear locked at once (see §28).
+
+**No background worker today:** There is no cron, webhook, or bot polling external sources. `PicksClient` only refetches when sport/card filters change — not on a timer during live events.
+
+**Known gap — server trust of client lock flag:** `FightCard.tsx` passes `isLocked` from the client into `savePredictionAction`. `savePrediction()` validates against that flag but does **not** re-fetch the fight row from the database. Any live-lock system must enforce lock server-side. See §28.
 
 ### Profiles: `src/lib/data/profiles.ts`
 - `getCurrentUserProfile`, `getProfileByUsername`
@@ -359,11 +379,13 @@ Profile pages use **`getFightsForProfile()`** + **`getUserPredictions()`** — s
 - `CurrentPickCard.tsx` links to focused fight; `PicksClient` expands correct card/section
 
 ### Locked event cards (`PicksClient.tsx` → `EventCardSection`)
-When `isEventPicksLocked(cardFights)`:
+When `isEventPicksLocked(cardFights)` — i.e. **all** fights on the card are locked:
 1. **Never auto-expands** (even if card filter selected)
-2. Badge: **"Picks Locked — Event Started"** (amber)
+2. Badge: **"Picks Locked — Event Started"** (amber) — misleading during partial live cards; planned UX change in §28
 3. **Collapsed** by default; `LockGraphic variant="card"` centered overlay
 4. User can still tap to expand and view picks
+
+During a live card with mixed state (some fights finished, some still open), the card stays expandable and only individual locked fights show the lock panel. Correct per-fight behavior depends on accurate `lock_time` values and/or live sync (§28).
 
 ### Pick impact FX (Picks page only)
 - Glove overlay: `PickImpactOverlay.tsx`, assets `/impact/Glove1.png`, `Glove2.png`
@@ -387,6 +409,7 @@ When `isEventPicksLocked(cardFights)`:
 
 ### Typography (profile)
 - **Teko** font (`--font-teko` in `layout.tsx`) used for level names, section headings, world-rank numbers, subscription trial banner
+- Own profile uses `AppShell` with `centeredBrand` (PickFist logo header) + `headerTrailing={<LogoutButton />}`
 - `ProfileSectionHeading.tsx` — centered Teko section titles
 - `RankingTitleHeader.tsx` — globe icon + Teko rank titles (hero + card sizes)
 - `WorldRankInTheWorldBadge.tsx` — diagonal `-rotate-12` **"in the world"** chip on sport rank displays (red=boxing, purple=mma)
@@ -394,7 +417,7 @@ When `isEventPicksLocked(cardFights)`:
 ### Sections
 | Section | Component | Key logic |
 |---------|-----------|-----------|
-| Trial notice | `SubscriptionTrialNotice.tsx` | **Own profile only** — gold banner: "1 Month Free Trial · Unlimited picks"; dates from `profiles.created_at` via `trialDisplay.ts` |
+| Trial notice | `SubscriptionTrialNotice.tsx` | **Own profile only** — status-aware gold banner; links to `/subscribe` or Stripe Portal; dates from `subscriptions` row (fallback: `profiles.created_at` via `trialDisplay.ts`) |
 | Hero | `ProfileHero.tsx` | Teko level name, world rank states, `PickRecordHeroButton`, compact recent form |
 | Sport rankings | `SportRankingsSection.tsx` | Tappable boxing/MMA cards with world rank + "in the world" badge; scroll/focus cues |
 | Current picks | `CurrentPicksSection.tsx` | Carousel; **Change Pick** deep links to `/picks?…` |
@@ -433,22 +456,96 @@ Dependency: **jspdf** for PDF generation.
 
 ---
 
-## 11. Subscription & billing (status)
+## 11. Subscription & billing
 
-### Implemented (visual only — no payments)
-- `SubscriptionTrialNotice` on own profile — template for future billing UX
-- `src/lib/billing/trialDisplay.ts` — trial end = signup (`profiles.created_at`) + 1 calendar month
-- Test: `src/lib/billing/trialDisplay.test.ts`
-- **No** Stripe, no `subscription` DB tables, no pick limits enforced in `savePrediction()` yet
+### Status (June 2026)
 
-### Planned (discussed, not built — needs explicit approval)
+| Layer | State |
+|-------|--------|
+| **Production (deployed)** | Visual trial banner only (`154ad39`); no Stripe env, no `subscriptions` table |
+| **Working tree (pending commit/deploy)** | Full billing v1 — Stripe Checkout, Portal, webhooks, `subscriptions` table — **pick limits not enforced yet** |
+
+### Product policy
+
+- **1 calendar month** free trial from signup (`TRIAL_LENGTH_MONTHS = 1` in `trialDates.ts`)
+- Users may subscribe **anytime during trial**; Stripe charges only after trial ends
+- Early subscribe preserves remaining trial via Stripe `trial_end` on Checkout
+- **Canceled during trial:** access continues until `trial_ends_at`; new Checkout blocked (Portal only)
+- **`hasPremiumAccess()`** is the future enforcement hook — all users still have unlimited picks today
+
+### Database (`subscriptions` — separate from `profiles`)
+
+Migration: `supabase/migrations/20260614_subscriptions.sql` (also reflected in `schema.sql`)
+
+| Table | Purpose |
+|-------|---------|
+| `subscriptions` | One row per user: Stripe IDs, `status`, `trial_started_at`, `trial_ends_at`, `checkout_trial_adjusted_at`, `current_period_end`, `cancel_at_period_end` |
+| `stripe_webhook_events` | Idempotent webhook processing (`processing` / `completed` / `failed`) |
+
+- **Trigger:** `handle_new_user()` also inserts `subscriptions` row with fixed trial window
+- **Backfill:** migration backfills existing profiles
+- **RLS:** users `SELECT` own row; writes via service role / webhook only
+
+### Key modules
+
+| File | Role |
+|------|------|
+| `src/lib/billing/trialDates.ts` | Trial window math, `resolveCheckoutTrialEnd()`, Stripe 49h minimum buffer |
+| `src/lib/billing/subscriptionEntitlement.ts` | `isTrialing()`, `isCanceledDuringTrial()`, `hasPremiumAccess()`, checkout guards |
+| `src/lib/billing/subscriptionDisplay.ts` | Profile banner copy/CTAs by status |
+| `src/lib/billing/trialDisplay.ts` | Date formatting fallback when no subscription row |
+| `src/lib/billing/stripeConfig.ts` | Env gate (`stripeEnabled()`), price ID |
+| `src/lib/billing/stripeClient.ts` | Server Stripe SDK singleton |
+| `src/lib/billing/webhookClaimPolicy.ts` | Stale-reclaim idempotency for webhook events |
+| `src/lib/data/subscriptions.ts` | CRUD + `ensureSubscriptionForUser`, `persistCheckoutTrialEnd` |
+| `src/lib/supabase/subscriptionMapper.ts` | DB row ↔ `Subscription` type |
+| `src/app/actions/billing.ts` | `createCheckoutSessionAction`, `createCustomerPortalSessionAction` |
+| `src/app/api/stripe/webhook/route.ts` | Sync Stripe subscription state to DB |
+| `src/app/subscribe/page.tsx` | Subscribe / manage UI |
+
+### Checkout trial-end policy (`resolveCheckoutTrialEnd`)
+
+Stripe requires `trial_end` ≥ ~48h ahead. PickFist uses a **49h buffer**:
+
+| Condition | Checkout `trial_end` |
+|-----------|----------------------|
+| Active trial, **>49h** remaining | Stored `trial_ends_at` |
+| Active trial, **<49h** remaining, not yet adjusted | Extend once to **checkout + 3 calendar days**; persist + set `checkout_trial_adjusted_at` |
+| Already adjusted (`checkout_trial_adjusted_at` set) | Reuse stored date (bump to 49h minimum only) |
+| Trial expired | No `trial_end` → immediate billing |
+
+Also: Stripe idempotency key on session create; reuse open Checkout session URL when available; block duplicate Checkout when Stripe sub exists during trial/paid period.
+
+### Webhook idempotency
+
+RPC `claim_stripe_webhook_event` on `stripe_webhook_events`:
+
+- `completed` → skip duplicate
+- `failed` → reclaim immediately
+- `processing` <5 min → `busy` (Stripe retries)
+- `processing` ≥5 min → **stale reclaim** (crash recovery)
+
+Mark `completed` only after DB sync succeeds; failures → `failed` + HTTP 500 for Stripe retry.
+
+### Planned (not built — needs explicit approval)
+
 | Tier | Proposed limits |
 |------|-----------------|
 | **Standard** (post-trial) | 3 picks per day |
-| **Premium** | $1.99/mo or $20/yr — unlimited picks |
+| **Premium** | ~£4.99/mo — unlimited picks |
 
-Recommended enforcement point when built: `savePrediction()` in `src/lib/data/fights.ts`.  
-Guests currently unlimited in `localStorage`; logged-in users unlimited until billing ships.
+Recommended enforcement point: `savePrediction()` in `src/lib/data/fights.ts` calling `hasPremiumAccess()`.  
+Guests currently unlimited in `localStorage`; logged-in users unlimited until enforcement ships.
+
+### Deploy checklist (billing v1)
+
+1. Commit billing code
+2. Create Stripe test product + price → `STRIPE_PRICE_ID`
+3. Run `20260614_subscriptions.sql` in Supabase
+4. Add Stripe env vars to Vercel (see §19)
+5. Deploy
+6. Register webhook endpoint in Stripe Dashboard → `STRIPE_WEBHOOK_SECRET` → redeploy
+7. End-to-end test in Stripe test mode before switching to live keys
 
 ---
 
@@ -456,6 +553,7 @@ Guests currently unlimited in `localStorage`; logged-in users unlimited until bi
 
 - `src/lib/rankings.ts` — eligibility, sort order, rank display states
 - `src/app/rankings/RankingsClient.tsx` — tabs: global / boxing / mma
+- `RankingsHero.tsx` → `TabBar` with `pulseActive` — calm fade on active tab
 - `src/app/actions/rankings.ts` — `loadLeaderboardAction(tab)`
 
 **Sort:** rating desc → graded count desc → accuracy desc → username asc  
@@ -584,9 +682,12 @@ Run order: `schema.sql` → `seed_launch.sql`
 | `fight_results` | Official outcomes (one per fight) |
 | `rating_history` | Audit trail per graded pick |
 | `grading_runs` | Admin grading batch metadata |
+| `subscriptions` | Billing entitlement + Stripe sync (see §11) |
+| `stripe_webhook_events` | Webhook idempotency state machine |
 
-**RLS:** public SELECT; users INSERT/UPDATE own profile + predictions.  
-**Trigger:** `handle_new_user()` creates profile on signup.  
+**RLS:** public SELECT; users INSERT/UPDATE own profile + predictions; users SELECT own subscription.  
+**Trigger:** `handle_new_user()` creates profile + subscription row on signup.  
+**Migration:** `migrations/20260614_subscriptions.sql` — run on production before enabling Stripe.  
 **Do not run** `migrations/20260603_favourite_rating_v2.sql` on fresh DB (already in schema).
 
 ---
@@ -608,6 +709,10 @@ Run order: `schema.sql` → `seed_launch.sql`
 
 ### `src/app/actions/admin.ts`
 - `createEvent`, `createFight`, `settleFight`, `getAdminData`
+
+### `src/app/actions/billing.ts`
+- `createCheckoutSessionAction` — Stripe Checkout with trial preservation + guards
+- `createCustomerPortalSessionAction` — manage/cancel via Stripe Portal
 
 ---
 
@@ -643,6 +748,13 @@ See `.env.example`:
 | `PICKFIST_PHANTOM_CARD` | Local dev | Phantom test card |
 | `PICKFIST_SEED_RANKINGS` | Server | Opt-in: must be `true` to enable bootstrap seeds (set on Vercel Production) |
 | `PICKFIST_SEED_RANKINGS_TARGET` | Production | Target visible rows per tab during bootstrap (default 10) |
+| `STRIPE_SECRET_KEY` | **Server only** | Stripe API key (`sk_test_…` or live) |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Public | Stripe publishable key |
+| `STRIPE_PRICE_ID` | Server | Subscription price ID from Stripe Dashboard |
+| `STRIPE_WEBHOOK_SECRET` | **Server only** | Webhook signing secret (`whsec_…`) |
+| `NEXT_PUBLIC_APP_URL` | Public | Site origin for Checkout return URLs (e.g. `https://pickfist.com`) |
+| `PICKFIST_SUBSCRIPTION_PRICE_LABEL` | Server | Optional display label on `/subscribe` |
+| `CRON_SECRET` | Server | *(Planned §28)* Bearer for `/api/cron/sync-live-fights` |
 
 **Never commit** `.env.local`, `.mock-data/`, or secrets.
 
@@ -663,6 +775,11 @@ Key test files:
 - `src/lib/rankings/seedRankings.test.ts` — bootstrap leaderboard merge + collision handling
 - `src/lib/pickRecord/pickRecord.test.ts` — pick record classify/sort
 - `src/lib/billing/trialDisplay.test.ts` — trial date display
+- `src/lib/billing/trialDates.test.ts` — trial window + checkout trial-end policy
+- `src/lib/billing/subscriptionEntitlement.test.ts` — premium access + checkout guards
+- `src/lib/billing/subscriptionDisplay.test.ts` — banner copy by status
+- `src/lib/billing/webhookClaimPolicy.test.ts` — webhook stale-reclaim policy
+- `src/app/api/stripe/webhook/route.test.ts` — webhook handler
 - `src/lib/picks/guestPickStore.test.ts`, `reconcileGuestPicks.test.ts`
 - `src/lib/auth/oauth.test.ts`, `username.test.ts`, `rememberMe.test.ts`
 
@@ -679,7 +796,8 @@ npx vercel --prod --yes
 
 - **Production URL:** pickfist.com
 - **Vercel project:** pickfist (separate from other sites on account)
-- Env vars must be set in Vercel dashboard (all Supabase + ADMIN_EMAILS)
+- Env vars must be set in Vercel dashboard (Supabase + `ADMIN_EMAILS` + Stripe when billing enabled)
+- **Billing:** run `20260614_subscriptions.sql` in Supabase before first Stripe deploy; register webhook after deploy
 - Enable Web Analytics in Vercel dashboard (code already includes `<Analytics />`)
 - Google OAuth: configure in Google Cloud + Supabase Auth providers
 
@@ -696,10 +814,13 @@ Project may live in OneDrive. Stale `.next` causes broken CSS.
 2. Set `lock_time`, `favourite_side`, `favourite_level`, `scheduled_rounds`, `fight_order`
 3. Optionally add to `supabase/seed_launch.sql` for fresh DBs
 
-### Change pick lock behavior (UI only)
+### Change pick lock behavior
 - Lock inference: `src/lib/utils.ts` (`isFightLocked`, `inferFightTab`)
 - Locked card collapse: `PicksClient.tsx` + `isEventPicksLocked()` in `fights-utils.ts`
 - Pick locked panel: `FightCard.tsx`
+- Save enforcement: `savePrediction()` in `fights.ts` + `savePredictionAction` in `picks.ts` — **must** re-fetch fight and compute lock server-side (§28 Phase 0)
+- Per-fight `lock_time` when seeding: set estimated ringwalk per bout, not card segment start (§28)
+- Live sync worker (when built): §28 — ESPN poller + Vercel Cron
 
 ### Change profile hero / qualification text
 - `src/lib/profile/display.ts` — `getGlobalRankHeroState`, `getLockedPickCount`
@@ -738,9 +859,15 @@ See **§24 Production SQL playbook** — use targeted `supabase/fix_*.sql` and `
 ### Add Pick Record export styling
 - `src/lib/pickRecord/exportPickRecord.ts` — PDF layout + TXT format
 
-### Change subscription trial banner (visual only)
-- `src/components/profile/SubscriptionTrialNotice.tsx` — copy/styling
-- `src/lib/billing/trialDisplay.ts` — trial length (currently 1 month from `profiles.created_at`)
+### Change subscription trial banner / billing UX
+- `src/components/profile/SubscriptionTrialNotice.tsx` — copy/styling; links to `/subscribe`
+- `src/lib/billing/subscriptionDisplay.ts` — status-aware headlines/sub-lines/CTAs
+- `src/lib/billing/trialDates.ts` — trial length (1 calendar month) + Checkout trial-end policy
+- `src/app/subscribe/page.tsx` — subscribe page layout and error states
+- Stripe product/price: Dashboard or Cursor Stripe MCP (`.cursor/mcp.json` — OAuth, separate from app env vars)
+
+### Enable billing in production
+See §11 deploy checklist — migration → env vars → deploy → webhook secret → test mode E2E before live keys.
 
 ---
 
@@ -756,7 +883,7 @@ See **§24 Production SQL playbook** — use targeted `supabase/fix_*.sql` and `
 | `.mock-data/` contents | Gitignored dev files |
 | Run old migrations on fresh DB | Columns already in `schema.sql` |
 | Phantom card in production | Dev-only guards in `phantomPicksDev.ts` |
-| Enforce subscription pick limits without product sign-off | Billing not wired; guests unlimited today |
+| Enforce subscription pick limits without product sign-off | `hasPremiumAccess()` exists but `savePrediction()` not wired; guests unlimited today |
 | Insert `card_tier` on production events | Column does not exist in live schema |
 
 ---
@@ -773,6 +900,7 @@ See **§24 Production SQL playbook** — use targeted `supabase/fix_*.sql` and `
 | Bam card wrong title | Old name `Rodriguez vs. Vargas` | `supabase/fix_rodriguez_vargas_event_name.sql` or `UPDATE … WHERE id = 'e0000006-0006-4000-a000-000000000006'` |
 | Mayweather not first on card | Wrong `fight_order` | `supabase/fix_battle_of_legends_fight_order.sql` |
 | UFC Freedom favourites wrong | Seed drift | `supabase/fix_ufc_freedom_250_favourites.sql` |
+| UFC Freedom picks lock too early | Six of seven fights share main-card `lock_time` (`2026-06-15T00:00:00Z`) in `seed_ufc_freedom_250_june14.sql` | Per-fight ringwalk times + live sync (§28); manual `UPDATE fights SET status = 'locked'` only for bouts already live/finished |
 | Brooks opponent name | Was wrong on Fury card | `supabase/fix_rahim_pardesi_name.sql` |
 
 ### When to use which Athens / Battle of Legends script
@@ -787,18 +915,25 @@ See **§24 Production SQL playbook** — use targeted `supabase/fix_*.sql` and `
 |------|----------|--------------|
 | Bam Rodriguez vs. Vargas | `e0000006-0006-4000-a000-000000000006` | `evt-006` |
 | Mayweather vs. Zambidis (Battle of the Legends) | `e0000023-0023-4000-a000-000000000023` | `evt-023` |
+| UFC Freedom 250: Topuria vs Gaethje | `e0000022-0022-4000-a000-000000000022` | `evt-022` |
 
 Mayweather main event: `fight_order = 1`, appears in **both** Boxing and MMA sport filters (mixed card).
 
 ---
 
-## 25. Current state (handoff snapshot — 12 June 2026)
+## 25. Current state (handoff snapshot — 15 June 2026)
 
 ### Latest deployed commits (newest first)
 | Commit | Summary |
 |--------|---------|
-| `154ad39` | Profile free-trial subscription notice; Athens seed SQL fixes (`card_tier` removed); `seed_battle_of_legends_fights_only.sql` |
-| `b701c1c` | Battle of Legends card (`evt-023`); pick UX — hide empty "Your current pick" panel; receipt-style Pick Record PDF export |
+| `3285c75` | Profile page centered logo header; smaller trial notice; logout in header trailing slot |
+| `e2d6e71` | Calm fade pulse on active Global/Boxing/MMA rankings tab |
+| `ea85819` | Local mock rankings aligned with profile scoring; improved rankings help modal |
+| `543e5b9` | Super Pick scoring; simplified rankings help modal |
+| `539b6e3` | Bootstrap seed profiles renamed with realistic display names |
+| `2f464c9` | Bootstrap Top 10 rankings with strict opt-in `PICKFIST_SEED_RANKINGS` flag |
+| `154ad39` | Profile free-trial subscription notice (visual); Athens seed SQL fixes |
+| `b701c1c` | Battle of Legends card (`evt-023`); pick UX cleanup; receipt-style Pick Record PDF export |
 | `499113c` | Pick Record page (`/pick-record`), table-based PDF/TXT export, profile UX polish |
 | `e8bad6b` | UFC Freedom 250 White House card (`evt-022`); verified odds alignment |
 | `ce4fff2` | Clear stale guest-pick banner after login/logout |
@@ -836,10 +971,11 @@ Production Supabase may differ if seeds/fixes not applied.
 - **19–27 Jun:** Pugilist Revolution through Zayas vs. Ennis
 - **27 Jun:** **Mayweather vs. Zambidis** — Battle of the Legends, Athens (`seed_battle_of_legends_june27.sql`) — 15 fights, boxing + MMA menu
 
-### Not yet implemented (paused)
-- Stripe / payment integration
-- Standard vs Premium pick limits (see §11)
-- Subscription DB columns
+### Not yet implemented (paused / planned)
+- **Per-fight live locking bot** — ESPN scoreboard poller, server-side lock enforcement, client refresh during live cards (full design §28)
+- **Billing deploy** — Stripe + `subscriptions` table implemented in working tree; pending commit, migration, env vars, webhook registration (see §11)
+- **Pick limits** — `hasPremiumAccess()` ready; `savePrediction()` enforcement deferred until billing stable in test mode
+- Standard vs Premium daily pick caps (see §11)
 
 ### Known local dev tools
 - `PICKFIST_USE_SUPABASE=true` — test live auth/data locally
@@ -850,7 +986,11 @@ Production Supabase may differ if seeds/fixes not applied.
 - Vercel Web Analytics toggle in dashboard
 - `ADMIN_EMAILS` for admin access
 - Set **`PICKFIST_SEED_RANKINGS=true`** on Vercel Production for bootstrap Top 10 (redeploy after env change)
+- **Billing (when ready):** Stripe test product/price, Supabase migration, Vercel Stripe env vars, webhook endpoint (§11)
 - Run production SQL fixes above when cards missing or misnamed on live DB
+
+### Uncommitted in working tree (June 2026)
+Full billing v1 (Stripe Checkout/Portal/webhook, `subscriptions` table, status-aware trial banner). **429 tests passing** locally. Not deployed until committed + migration + env vars.
 
 ---
 
@@ -865,6 +1005,8 @@ Defined in `src/types/index.ts`:
 - `FavouriteLevel`: heavy_favourite | favourite | even
 - `FightWithRelations`: Fight + event + result + userPrediction
 - `RankingTab`: global | boxing | mma
+- `SubscriptionStatus`: trialing | active | past_due | canceled | unpaid | incomplete | incomplete_expired | paused
+- `Subscription`: billing row (separate from `Profile`)
 
 ---
 
@@ -874,7 +1016,7 @@ Defined in `src/types/index.ts`:
 2. **Server actions** for all mutations (picks, auth, admin).
 3. **Mappers** for all DB rows (`mappers.ts`) — don't inline row shapes.
 4. **Dynamic imports** of Supabase in mock-safe modules (`fights.ts` pattern).
-5. **No lock cron** — lock state is always computed from `lock_time` + `status`.
+5. **Lock state is derived, not pushed** — today computed from `lock_time` + `status` with no live sync cron; when §28 ships, server-side enforcement is authoritative and the worker updates `status` from external sources.
 6. **Round options** from `fight.scheduled_rounds` — never hardcode 12 or 5.
 7. **Minimize scope** — focused diffs; don't refactor unrelated code.
 8. **Tests** for rating/display logic changes; `npm run build` before deploy.
@@ -882,8 +1024,202 @@ Defined in `src/types/index.ts`:
 10. **Rating math lives in one place** — UI reads `getPickPotential`, never duplicates tiers.
 11. **Guest picks** — never write guest drafts to Supabase directly; use `guestPickStore` + `migrateGuestPicksAction`.
 12. **Production SQL** — data fixes go in `supabase/fix_*.sql` / idempotent seeds; do not assume `card_tier` or other dev-only columns exist on live DB.
-13. **Billing UI is cosmetic** until Stripe + `savePrediction()` limits are explicitly requested.
+13. **Billing** — entitlement lives in `subscriptions` table + `hasPremiumAccess()`; pick enforcement in `savePrediction()` is **not wired** until explicitly requested.
 14. **Bootstrap seed rankings** — merge only in `getLeaderboard` / `getProfileRanks`; filter with `isSeedRankingsProfile()` in any future prize or user-count logic.
+15. **Never trust client `isLocked`** on pick save — always re-fetch fight from DB until §28 Phase 0 is merged.
+
+---
+
+## 28. Per-fight live locking (design + roadmap)
+
+**Status:** Design approved; **not yet implemented** in code (as of 15 Jun 2026).
+
+### Problem
+
+Users should pick individual fights on a card **as close to each bout's start as possible** — not when the card or main-card segment starts. During a live event, finished and in-progress fights must be locked while later bouts on the same card stay open.
+
+The app **already supports per-fight lock in code** (`isFightLocked` per fight; card collapses only when `isEventPicksLocked` = all fights locked). What is missing:
+
+1. **Seed data** — e.g. UFC Freedom 250: six of seven fights in `seed_ufc_freedom_250_june14.sql` share `lock_time = 2026-06-15T00:00:00Z` (8:00 PM EDT main-card start); only Topuria vs Gaethje has a later time (`03:00 UTC`). When that timestamp passes, all six co-main fights lock together even if hours apart on the broadcast.
+2. **Live sync** — no worker polls external sources to lock fights when they actually start or finish.
+3. **Server enforcement** — `savePrediction()` accepts `isLocked` from the client instead of re-fetching the fight row.
+4. **Client refresh** — `PicksClient` does not poll during live cards; countdowns go stale until filter change or page reload.
+
+### Desired behavior (per fight)
+
+| Trigger | Action |
+|---------|--------|
+| **Pre-fight lock** | Lock ~0–2 min before that bout's bell / ringwalk — not card start |
+| **Fight live (`in`)** | Force `status = locked` immediately (even if `lock_time` still in future) |
+| **Fight final (`post`)** | Keep locked; set `status = result_pending`; upsert `fight_results`; grade via existing pipeline |
+| **Still scheduled (`pre`)** | Stay pickable; optionally refresh `lock_time` if schedule shifts |
+
+Example mid-card state (UFC Freedom 250):
+
+```
+Lopes vs Garcia      → LOCKED (finished)
+Nickal vs Daukaus    → LOCKED (live or finished)
+Ruffy vs Chandler    → OPEN (not started)
+Topuria vs Gaethje   → OPEN (main event hours away)
+```
+
+### Recommended data source
+
+**Primary: ESPN Site API** (free, no API key, JSON)
+
+```
+GET https://site.api.espn.com/apis/site/v2/sports/mma/ufc/scoreboard?dates=YYYYMMDD
+```
+
+- `events[]` → `competitions[]` (individual bouts)
+- `status.type.state`: `pre` → `in` → `post`
+- Fighter names in `competitors[]`; winner flagged when final
+- Method/round often available on completed bouts
+- Same pattern usable for other ESPN-covered MMA/boxing leagues
+
+**Pros:** Accessible, fast enough for 15–30s polling, good live status.  
+**Cons:** Unofficial/undocumented; fighter name matching required; no SLA.
+
+**Secondary (results):** [ufcstats.com](http://www.ufcstats.com) — official UFC stats; scrape for method/round settlement after bouts end. HTTP only, rate-limited.
+
+**Paid (later):** Sportradar UFC feed, SportsDataIO — enterprise real-time; overkill until scale demands it.
+
+**Avoid as primary:** Scraping UFC.com / broadcast apps — fragile, often blocked.
+
+### Target architecture
+
+```mermaid
+flowchart TD
+    subgraph sources [External]
+        ESPN[ESPN Scoreboard API]
+        UFCStats[ufcstats.com - results fallback]
+    end
+
+    subgraph worker [Live Sync Worker]
+        Poll[Poll scoreboard for event date]
+        Match[Match competitions to fights DB]
+        Lock[status=locked when state=in or post]
+        Result[Upsert fight_results when state=post]
+    end
+
+    subgraph db [Supabase]
+        Fights[fights.lock_time + status]
+        Results[fight_results]
+    end
+
+    subgraph app [Next.js]
+        PicksUI[PicksClient - poll during live]
+        SaveAction[savePrediction - server lock check]
+    end
+
+    ESPN --> Poll --> Match
+    Match --> Lock --> Fights
+    Match --> Result --> Results
+    UFCStats -.-> Result
+    Fights --> PicksUI
+    Fights --> SaveAction
+```
+
+#### Layer 1 — Database (minimal additions when built)
+
+Keep `lock_time` as **scheduled** lock (estimated ringwalk). Planned optional columns:
+
+| Column | Purpose |
+|--------|---------|
+| `external_source` + `external_id` | Reliable ESPN competition matching |
+| `actual_start_at` | Set when ESPN reports `in` |
+| `live_sync_enabled` on `events` | Only poll cards that are live today |
+
+**Tonight's fallback matcher:** normalized fighter surnames + event date (no migration required).
+
+#### Layer 2 — Live sync worker ("bot")
+
+Planned route or script, e.g. `/api/cron/sync-live-fights` (secured with `CRON_SECRET`):
+
+1. Select fights where `status = 'upcoming'` OR parent event is within ±6h of now
+2. Fetch ESPN scoreboard for relevant date(s) — use `20260614` and `20260615` if bouts cross midnight UTC
+3. For each matched bout:
+   - **`pre`** — leave open; optionally adjust `lock_time`
+   - **`in`** — `UPDATE fights SET status = 'locked'`
+   - **`post`** — keep locked; `status = 'result_pending'`; upsert `fight_results`; trigger grading (`settleFight` / `gradePredictionsForFight` logic in `admin.ts` + `gradeFight.ts`)
+4. Log sync runs (matches, misses, transitions)
+
+**Polling cadence (planned):**
+
+| Window | Interval |
+|--------|----------|
+| No live event | Off or daily schedule check |
+| Event ±2h | Every 30s |
+| Active bout (`in`) | Every 15s |
+
+**Scheduler:** Vercel Cron (`vercel.json` — not in repo yet) or external cron hitting the secured API route.
+
+#### Layer 3 — Server enforcement (required before bot)
+
+In `savePredictionAction` / `savePrediction`:
+
+1. Fetch fight row from DB by `fightId`
+2. Compute `isFightLocked(fight)` server-side
+3. Reject if locked — **ignore client `isLocked`**
+4. Optionally set `predictions.locked_at` on first save after lock (column exists in schema, unused today)
+
+`migrateGuestPicksAction` already re-fetches fights and checks `isFightLocked` — use the same pattern for normal saves.
+
+#### Layer 4 — Client UX (supplement only)
+
+During live cards, `PicksClient` should poll `loadPicksPageDataAction` every ~30s (or SWR/React Query). UI is not authoritative — server blocks late saves.
+
+Planned badge change: **"Live Card — X fights still open"** when some but not all fights are locked (replace misleading **"Picks Locked — Event Started"** during partial lock).
+
+### Hybrid lock strategy
+
+Static `lock_time` alone is insufficient (cards run long, walkouts vary, broadcast delays). Planned approach:
+
+| Mechanism | Role |
+|-----------|------|
+| `lock_time` (pre-seeded per bout) | UI countdown + fallback if ESPN down |
+| ESPN `in` | Authoritative "fight started — lock now" |
+| ESPN `post` | Authoritative "fight over — lock + ingest result" |
+| `lock_time - 90s` safety | Lock if ESPN lags near scheduled bell |
+
+### Implementation phases
+
+| Phase | Scope | Notes |
+|-------|--------|-------|
+| **0 — Hotfix** | Server-side lock check; manual SQL/script for live events; fix per-fight `lock_time` on remaining bouts | Required before any live card |
+| **1 — Bot MVP** | ESPN poller + name matcher + status transitions; Vercel Cron | Reuse admin settle/grade paths |
+| **2 — UX** | Client polling during live cards; partial-card badges | |
+| **3 — Auto-settle** | Map ESPN/ufcstats method+round → grading; admin review queue for ambiguous matches | |
+| **4 — Scale** | `external_id` on fights; boxing ESPN leagues; paid API if ESPN unreliable | |
+
+### Planned files (not in repo yet)
+
+```
+src/lib/live/
+  espnMmaScoreboard.ts      # fetch + parse ESPN response
+  fightMatcher.ts           # surname normalization + event-date match
+  syncLiveFights.ts         # orchestration + DB updates
+src/app/api/cron/sync-live-fights/route.ts
+vercel.json                 # cron schedule
+```
+
+### Risks and mitigations
+
+| Risk | Mitigation |
+|------|------------|
+| ESPN API changes | Abstract behind `LiveFightSource`; ufcstats fallback for results |
+| Name mismatch (O'Malley vs OMalley) | Normalize surnames; store ESPN IDs when seeding |
+| Double settlement | Idempotent upsert on `fight_results`; skip if already `settled` |
+| ESPN marks `in` late | `lock_time` fallback 1–2 min before published bell |
+| Stale browser tab | Server enforcement blocks late saves regardless |
+
+### Manual ops during live events (until bot ships)
+
+1. Fetch ESPN scoreboard for event date(s)
+2. For each bout with `state = in` or `post`: `UPDATE fights SET status = 'locked' WHERE id = …`
+3. For finished bouts only: enter results via `/admin/results` or targeted SQL → `result_pending` → grade
+4. **Do not** lock fights still in `pre` — later bouts must stay pickable
+5. Fix remaining fights' `lock_time` to realistic ringwalk estimates
 
 ---
 

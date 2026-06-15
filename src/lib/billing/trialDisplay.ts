@@ -1,6 +1,6 @@
-/** Visual trial template — billing not wired yet. Uses profile signup date for later reminders. */
+import { formatTrialDate, computeTrialWindow } from "@/lib/billing/trialDates";
 
-export const TRIAL_LENGTH_MONTHS = 1;
+export { TRIAL_LENGTH_MONTHS } from "@/lib/billing/trialDates";
 
 export type TrialDisplayInfo = {
   signupDate: Date;
@@ -9,28 +9,15 @@ export type TrialDisplayInfo = {
   trialEndsLabel: string;
 };
 
-function addCalendarMonths(date: Date, months: number): Date {
-  const result = new Date(date);
-  result.setMonth(result.getMonth() + months);
-  return result;
-}
-
-export function formatTrialDate(date: Date): string {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(date);
-}
-
+/** @deprecated Prefer getSubscriptionDisplayInfo with a Subscription row. */
 export function getTrialDisplayInfo(signupIso: string): TrialDisplayInfo {
-  const signupDate = new Date(signupIso);
-  const trialEndsAt = addCalendarMonths(signupDate, TRIAL_LENGTH_MONTHS);
-
+  const { trialStartedAt, trialEndsAt } = computeTrialWindow(signupIso);
   return {
-    signupDate,
+    signupDate: trialStartedAt,
     trialEndsAt,
-    signupLabel: formatTrialDate(signupDate),
+    signupLabel: formatTrialDate(trialStartedAt),
     trialEndsLabel: formatTrialDate(trialEndsAt),
   };
 }
+
+export { formatTrialDate } from "@/lib/billing/trialDates";

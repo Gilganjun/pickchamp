@@ -26,6 +26,43 @@ create table if not exists public.profiles (
   updated_at timestamptz not null default now()
 );
 
+-- Subscriptions (see migrations/20260614_subscriptions.sql)
+create table if not exists public.subscriptions (
+  user_id uuid primary key references public.profiles(id) on delete cascade,
+  stripe_customer_id text unique,
+  stripe_subscription_id text unique,
+  status text not null default 'trialing'
+    check (status in (
+      'trialing',
+      'active',
+      'past_due',
+      'canceled',
+      'unpaid',
+      'incomplete',
+      'incomplete_expired',
+      'paused'
+    )),
+  trial_started_at timestamptz not null,
+  trial_ends_at timestamptz not null,
+  checkout_trial_adjusted_at timestamptz,
+  current_period_end timestamptz,
+  cancel_at_period_end boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.stripe_webhook_events (
+  id text primary key,
+  event_type text not null,
+  status text not null default 'processing'
+    check (status in ('processing', 'completed', 'failed')),
+  attempt_count integer not null default 1,
+  last_error text,
+  processed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 -- Events
 create table if not exists public.events (
   id uuid primary key default gen_random_uuid(),
@@ -170,6 +207,24 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
 
+create or replace function public.handle_new_profile_subscription()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  insert into public.subscriptions (user_id, status, trial_started_at, trial_ends_at)
+  values (NEW.id, 'trialing', NEW.created_at, NEW.created_at + interval '1 month')
+  on conflict (user_id) do nothing;
+  return NEW;
+end;
+$$;
+
+drop trigger if exists on_profile_created_subscription on public.profiles;
+create trigger on_profile_created_subscription
+  after insert on public.profiles
+  for each row execute procedure public.handle_new_profile_subscription();
+
 -- RLS
 alter table public.profiles enable row level security;
 alter table public.events enable row level security;
@@ -187,6 +242,12 @@ create policy "Users can insert own profile"
 
 create policy "Users can update own profile"
   on public.profiles for update using (auth.uid() = id);
+
+alter table public.subscriptions enable row level security;
+
+create policy "Users can view own subscription"
+  on public.subscriptions for select
+  using (auth.uid() = user_id);
 
 create policy "Events are viewable by everyone"
   on public.events for select using (true);
@@ -222,6 +283,7 @@ grant select on public.predictions to anon, authenticated;
 grant select on public.fight_results to anon, authenticated;
 grant select on public.rating_history to anon, authenticated;
 grant select on public.grading_runs to anon, authenticated;
+grant select on public.subscriptions to authenticated;
 
 grant insert, update on public.profiles to authenticated;
 grant insert, update on public.predictions to authenticated;

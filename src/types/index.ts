@@ -64,6 +64,31 @@ export interface Profile {
   updated_at: string;
 }
 
+/** Billing entitlement — separate from profile identity. */
+export type SubscriptionStatus =
+  | "trialing"
+  | "active"
+  | "past_due"
+  | "canceled"
+  | "unpaid"
+  | "incomplete"
+  | "incomplete_expired"
+  | "paused";
+
+export interface Subscription {
+  user_id: string;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  status: SubscriptionStatus;
+  trial_started_at: string;
+  trial_ends_at: string;
+  checkout_trial_adjusted_at: string | null;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Event {
   id: string;
   name: string;
