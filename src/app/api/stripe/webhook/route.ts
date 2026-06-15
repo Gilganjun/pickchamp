@@ -1,11 +1,16 @@
 import Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { mapStripeSubscriptionStatus } from "@/lib/billing/subscriptionEntitlement";
+import {
+  getStripeSubscriptionPeriodEnd,
+  toIsoFromUnixSeconds,
+} from "@/lib/billing/stripeSubscriptionFields";
 import { getStripeClient } from "@/lib/billing/stripeClient";
 import { getStripeWebhookSecret, stripeEnabled } from "@/lib/billing/stripeConfig";
 import {
   claimStripeWebhookEvent,
   completeStripeWebhookEvent,
+  ensureSubscriptionRowForStripeSync,
   failStripeWebhookEvent,
   fetchSubscriptionByStripeCustomerId,
   fetchSubscriptionByStripeSubscriptionId,
@@ -13,11 +18,6 @@ import {
 } from "@/lib/data/subscriptions";
 
 export const runtime = "nodejs";
-
-function toIsoFromUnix(seconds: number | null | undefined): string | null {
-  if (seconds == null) return null;
-  return new Date(seconds * 1000).toISOString();
-}
 
 async function resolveUserIdFromSubscription(
   stripeSubscription: Stripe.Subscription
@@ -46,9 +46,14 @@ async function resolveUserIdFromSubscription(
 async function syncStripeSubscription(
   stripeSubscription: Stripe.Subscription
 ): Promise<void> {
-  // Idempotent state sync — safe to rerun after stale webhook reclaim.
   const userId = await resolveUserIdFromSubscription(stripeSubscription);
-  if (!userId) return;
+  if (!userId) {
+    throw new Error(
+      `Unable to resolve user_id for Stripe subscription ${stripeSubscription.id}`
+    );
+  }
+
+  await ensureSubscriptionRowForStripeSync(userId);
 
   const customerId =
     typeof stripeSubscription.customer === "string"
@@ -59,12 +64,14 @@ async function syncStripeSubscription(
     stripe_customer_id: customerId,
     stripe_subscription_id: stripeSubscription.id,
     status: mapStripeSubscriptionStatus(stripeSubscription.status),
-    current_period_end: toIsoFromUnix(stripeSubscription.current_period_end),
+    current_period_end: toIsoFromUnixSeconds(
+      getStripeSubscriptionPeriodEnd(stripeSubscription)
+    ),
     cancel_at_period_end: stripeSubscription.cancel_at_period_end,
   };
 
-  const trialEnd = toIsoFromUnix(stripeSubscription.trial_end);
-  const trialStart = toIsoFromUnix(stripeSubscription.trial_start);
+  const trialEnd = toIsoFromUnixSeconds(stripeSubscription.trial_end);
+  const trialStart = toIsoFromUnixSeconds(stripeSubscription.trial_start);
   if (trialEnd) patch.trial_ends_at = trialEnd;
   if (trialStart) patch.trial_started_at = trialStart;
 
@@ -85,11 +92,17 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       ? session.subscription
       : session.subscription?.id;
 
-  if (!userId || !customerId) return;
+  if (!userId || !customerId) {
+    throw new Error(
+      `checkout.session.completed missing user_id or customer (user_id=${userId ?? "null"})`
+    );
+  }
+
+  await ensureSubscriptionRowForStripeSync(userId);
 
   await updateSubscriptionFromStripe(userId, {
     stripe_customer_id: customerId,
-    stripe_subscription_id: subscriptionId ?? undefined,
+    ...(subscriptionId ? { stripe_subscription_id: subscriptionId } : {}),
   });
 
   if (subscriptionId) {
@@ -138,7 +151,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
-  const claim = await claimStripeWebhookEvent(event.id, event.type);
+  let claim: Awaited<ReturnType<typeof claimStripeWebhookEvent>>;
+  try {
+    claim = await claimStripeWebhookEvent(event.id, event.type);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "claim_stripe_webhook_event failed";
+    console.error("stripe webhook claim error:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 
   if (claim === "duplicate") {
     return NextResponse.json({ received: true, duplicate: true });
@@ -155,7 +176,14 @@ export async function POST(request: Request) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Webhook processing failed";
-    await failStripeWebhookEvent(event.id, message);
+    try {
+      await failStripeWebhookEvent(event.id, message);
+    } catch (failError) {
+      const failMessage =
+        failError instanceof Error ? failError.message : "fail_stripe_webhook_event failed";
+      console.error("stripe webhook fail marker error:", failMessage);
+    }
+    console.error("stripe webhook processing error:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

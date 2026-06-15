@@ -11,7 +11,27 @@ function throwQueryError(table: string, error: { message: string }) {
   throw new Error(`Supabase ${table} query failed: ${error.message}`);
 }
 
+function stripUndefined<T extends Record<string, unknown>>(patch: T): T {
+  return Object.fromEntries(
+    Object.entries(patch).filter(([, value]) => value !== undefined)
+  ) as T;
+}
+
 export type WebhookClaimResult = "claimed" | "duplicate" | "busy";
+
+/** Service-role read — webhooks and server actions without a user session. */
+export async function fetchSubscriptionByUserIdAdmin(
+  userId: string
+): Promise<Subscription | null> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("subscriptions")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throwQueryError("subscriptions", error);
+  return data ? mapSubscription(data) : null;
+}
 
 export async function fetchSubscriptionByUserId(
   userId: string
@@ -30,7 +50,7 @@ export async function ensureSubscriptionForUser(
   userId: string,
   signupIso: string
 ): Promise<Subscription> {
-  const existing = await fetchSubscriptionByUserId(userId);
+  const existing = await fetchSubscriptionByUserIdAdmin(userId);
   if (existing) return existing;
 
   const admin = createAdminClient();
@@ -47,12 +67,33 @@ export async function ensureSubscriptionForUser(
     .single();
 
   if (error) {
-    const retry = await fetchSubscriptionByUserId(userId);
+    const retry = await fetchSubscriptionByUserIdAdmin(userId);
     if (retry) return retry;
     throwQueryError("subscriptions", error);
   }
 
   return mapSubscription(data);
+}
+
+export async function ensureSubscriptionRowForStripeSync(
+  userId: string
+): Promise<Subscription> {
+  const existing = await fetchSubscriptionByUserIdAdmin(userId);
+  if (existing) return existing;
+
+  const admin = createAdminClient();
+  const { data: profile, error: profileError } = await admin
+    .from("profiles")
+    .select("created_at")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (profileError) throwQueryError("profiles", profileError);
+  if (!profile?.created_at) {
+    throw new Error(`No profile row for user_id=${userId}`);
+  }
+
+  return ensureSubscriptionForUser(userId, String(profile.created_at));
 }
 
 export async function persistCheckoutTrialEnd(
@@ -96,17 +137,24 @@ export async function updateSubscriptionFromStripe(
   patch: SubscriptionStripePatch
 ): Promise<Subscription> {
   const admin = createAdminClient();
+  const payload = stripUndefined({
+    ...patch,
+    updated_at: new Date().toISOString(),
+  });
+
   const { data, error } = await admin
     .from("subscriptions")
-    .update({
-      ...patch,
-      updated_at: new Date().toISOString(),
-    })
+    .update(payload)
     .eq("user_id", userId)
     .select("*")
-    .single();
+    .maybeSingle();
 
   if (error) throwQueryError("subscriptions", error);
+  if (!data) {
+    throw new Error(
+      `Supabase subscriptions update affected 0 rows for user_id=${userId}`
+    );
+  }
   return mapSubscription(data);
 }
 

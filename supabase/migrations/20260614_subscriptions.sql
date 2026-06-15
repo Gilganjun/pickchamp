@@ -205,4 +205,8 @@ create policy "Users can view own subscription"
 
 grant select on public.subscriptions to authenticated;
 
+grant execute on function public.claim_stripe_webhook_event(text, text) to service_role;
+grant execute on function public.complete_stripe_webhook_event(text) to service_role;
+grant execute on function public.fail_stripe_webhook_event(text, text) to service_role;
+
 -- Writes via service role only (Checkout + webhooks)

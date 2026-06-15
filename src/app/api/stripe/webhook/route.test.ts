@@ -25,6 +25,7 @@ vi.mock("@/lib/data/subscriptions", () => ({
   claimStripeWebhookEvent: mocks.claimStripeWebhookEvent,
   completeStripeWebhookEvent: mocks.completeStripeWebhookEvent,
   failStripeWebhookEvent: mocks.failStripeWebhookEvent,
+  ensureSubscriptionRowForStripeSync: vi.fn().mockResolvedValue({}),
   updateSubscriptionFromStripe: mocks.updateSubscriptionFromStripe,
   fetchSubscriptionByStripeCustomerId: vi.fn(),
   fetchSubscriptionByStripeSubscriptionId: vi.fn(),
@@ -63,9 +64,9 @@ describe("stripe webhook route", () => {
       customer: "cus_1",
       status: "trialing",
       metadata: { user_id: "user-1" },
-      trial_end: null,
-      trial_start: null,
-      current_period_end: 1_789_000_000,
+      trial_end: 1_789_000_000,
+      trial_start: 1_788_000_000,
+      items: { data: [{ current_period_end: 1_789_000_000 }] },
       cancel_at_period_end: false,
     });
   });
